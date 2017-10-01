@@ -11,11 +11,11 @@
 
 
 //**************RTTY Data Format**********************
-// $$<callsign>,<frame>,<hhmmss>,<latitude>,<longitude>,<height>,<radio chip temperature (°C)>,<battery voltage>,<used gps satellites>,<good gps datasets>,<bad gps datasets>,<gps fix>,<CRC>
+// $$<callsign>,<frame>,<hh:mm:ss>,<latitude>,<longitude>,<height>,<speed>,<rtty comment>,<radio chip temperature (°C)>,<battery voltage>,<used gps satellites>,<good gps datasets>,<bad gps datasets>,<gps fix>,<CRC>
 
 
 //**************config**********************
-#define CALLSIGN "NOCALL" // put your RTTY callsign here
+#define CALLSIGN "NOCALL" // put your RTTY callsign here, max. 15 characters
 #define APRS_CALLSIGN "NOCALL" // put your APRS callsign here, 6 characters. If your callsign is shorter add spaces
 #define APRS_SSID 'B' // put your APRS SSID here
 // 0 --> Your primary station usually fixed and message capable
@@ -36,6 +36,7 @@
 // F --> generic additional station, digi, mobile, wx, etc.
 
 #define APRS_COMMENT " Hello from the sky!"
+#define RTTY_COMMENT " Hello from the sky!"				// max. 25 characters
 #define RTTY_TO_APRS_RATIO 5 //transmit APRS packet with each x RTTY packet
 
 //*************TX Frequencies********************

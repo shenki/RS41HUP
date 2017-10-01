@@ -23,7 +23,7 @@
 ///////////////////////////// test mode /////////////
 const unsigned char test = 0; // 0 - normal, 1 - short frame only cunter, height, flag
 char callsign[15] = {CALLSIGN};
-
+char rtty_comment[25] = {RTTY_COMMENT};
 
 #define GREEN  GPIO_Pin_7
 #define RED  GPIO_Pin_8
@@ -212,18 +212,25 @@ void send_rtty_packet() {
         flaga &= ~0x80;
       }
   uint8_t lat_d = (uint8_t) abs(gpsData.lat_raw / 10000000);
-  uint32_t lat_fl = (uint32_t) abs(abs(gpsData.lat_raw) - lat_d * 10000000) / 100;
+  uint32_t lat_fl = (uint32_t) abs(abs(gpsData.lat_raw) - lat_d * 10000000) / 1000;
   uint8_t lon_d = (uint8_t) abs(gpsData.lon_raw / 10000000);
-  uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 100;
+  uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
 
-  sprintf(buf_rtty, "$$$$%s,%d,%02u%02u%02u,%s%d.%05ld,%s%d.%05ld,%ld,%d,%d.%d,%d,%d,%d,%02x", callsign, send_cun,
+  sprintf(buf_rtty, "$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%s,%d,%d.%d,%d,%d,%d,%02x",
+			  callsign,
+			  send_cun,
               gpsData.hours, gpsData.minutes, gpsData.seconds,
               gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
               gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
-              (gpsData.alt_raw / 1000), si4032_temperature, voltage/100, voltage-voltage/100*100, gpsData.sats_raw,
-              gpsData.ok_packets, gpsData.bad_packets,
+              (gpsData.alt_raw / 1000),
+              gpsData.speed_raw,
+              rtty_comment,
+              si4032_temperature,
+              voltage/100, voltage-voltage/100*100,
+              gpsData.sats_raw,
+              gpsData.ok_packets,
+              gpsData.bad_packets,
               flaga);
-//  CRC_rtty = 0xffff;                 //possibly not neccessary??
   CRC_rtty = gps_CRC16_checksum(buf_rtty + 4);
   sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
   rtty_buf = buf_rtty;
