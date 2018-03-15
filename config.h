@@ -10,12 +10,8 @@
 #else
 
 
-//**************RTTY Data Format**********************
-// $$<callsign>,<frame>,<hh:mm:ss>,<latitude>,<longitude>,<height>,<speed>,<rtty comment>,<radio chip temperature (°C)>,<battery voltage>,<used gps satellites>,<good gps datasets>,<bad gps datasets>,<gps fix>,<CRC>
-
-
 //**************config**********************
-#define CALLSIGN "NOCALL" // put your RTTY callsign here, max. 15 characters
+#define CALLSIGN "N0CALL" // put your RTTY callsign here, max. 15 characters
 #define APRS_CALLSIGN "NOCALL" // put your APRS callsign here, 6 characters. If your callsign is shorter add spaces
 #define APRS_SSID 'B' // put your APRS SSID here
 // 0 --> Your primary station usually fixed and message capable
@@ -36,18 +32,17 @@
 // F --> generic additional station, digi, mobile, wx, etc.
 
 #define APRS_COMMENT " Hello from the sky!"
-#define RTTY_COMMENT " Hello from the sky!"				// max. 25 characters
-#define RTTY_TO_APRS_RATIO 5 //transmit APRS packet with each x RTTY packet
+#define RTTY_COMMENT " Hello from the sky!"				// max. 25 characters - Currently un-used.
 
 //*************TX Frequencies********************
-#define RTTY_FREQUENCY  434.500f //Mhz middle frequency
-#define APRS_FREQUENCY  432.500f //Mhz middle frequency
+#define RTTY_FREQUENCY  434.650f //Mhz middle frequency
+#define APRS_FREQUENCY  439.100f //Mhz middle frequency - Australian 70cm APRS Frequency
 
 //************RTTY Shift*********************** si4032
 #define RTTY_DEVIATION 0x2	// RTTY shift = RTTY_DEVIATION x 270Hz
 
 //************RTTY Speed*********************** si4032
-#define RTTY_SPEED  75 // RTTY baudrate
+#define RTTY_SPEED  100 // RTTY baudrate
 
 //************rtty bits************************ si4032
 #define RTTY_7BIT   1 // if 0 --> 5 bits
@@ -56,23 +51,23 @@
 #define RTTY_USE_2_STOP_BITS   0
 
 //********* power definition**************************
-#define TX_POWER  0 // PWR 0...7 0- MIN ... 7 - MAX
+#define TX_POWER  5 // PWR 0...7 0- MIN ... 7 - MAX
 // 0 --> -1dBm
 // 1 --> 2dBm
 // 2 --> 5dBm
 // 3 --> 8dBm
 // 4 --> 11dBm
-// 5 --> 14dBm
+// 5 --> 14dBm - DEFAULT
 // 6 --> 17dBm
 // 7 --> 20dBm
 //****************************************************
 
 // Switch sonde ON/OFF via Button
 // If this is a flight you might prevent sonde from powered off by button
-#define ALLOW_DISABLE_BY_BUTTON 1
+#define ALLOW_DISABLE_BY_BUTTON 0
 
 //********** Frame Delay in msec**********************
-#define TX_DELAY  5000
+#define TX_DELAY  1000
 #endif
 
 #endif //RS41HUP_CONFIG_H

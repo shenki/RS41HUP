@@ -21,14 +21,14 @@
 #include "delay.h"
 #include "aprs.h"
 ///////////////////////////// test mode /////////////
-const unsigned char test = 0; // 0 - normal, 1 - short frame only cunter, height, flag
+const unsigned char test = 0; // 0 - normal, 1 - short frame only counter, height, flag
 char callsign[15] = {CALLSIGN};
 char rtty_comment[25] = {RTTY_COMMENT};
 
 #define GREEN  GPIO_Pin_7
 #define RED  GPIO_Pin_8
 
-unsigned int send_cun;        //frame counter
+unsigned int send_count;        //frame counter
 char status[2] = {'N'};
 int voltage;
 volatile int adc_bottom = 2000;
@@ -98,7 +98,7 @@ void TIM2_IRQHandler(void) {
               tx_on = 0;
               tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
               tx_enable = 0;
-              radio_disable_tx();
+              //radio_disable_tx(); // Don't turn off the transmitter!
             }
           } else if (send_rtty_status == rttyOne) {
             radio_rw_register(0x73, RTTY_DEVIATION, 1);
@@ -171,27 +171,10 @@ int main(void) {
   aprs_init();
   radio_enable_tx();
 
-  uint8_t rtty_before_aprs_left = RTTY_TO_APRS_RATIO;
-
 
   while (1) {
     if (tx_on == 0 && tx_enable) {
-      if (rtty_before_aprs_left){
         send_rtty_packet();
-        rtty_before_aprs_left --;
-      } else {
-        rtty_before_aprs_left = RTTY_TO_APRS_RATIO;
-        radio_enable_tx();
-        GPSEntry gpsData;
-        ublox_get_last_data(&gpsData);
-        USART_Cmd(USART1, DISABLE);
-        int8_t temperature = radio_read_temperature();
-        uint16_t voltage = (uint16_t) ADCVal[0] * 600 / 4096;
-        aprs_send_position(gpsData, temperature, voltage);
-        USART_Cmd(USART1, ENABLE);
-        radio_disable_tx();
-      }
-
     } else {
       NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
       __WFI();
@@ -206,38 +189,44 @@ void send_rtty_packet() {
   voltage = ADCVal[0] * 600 / 4096;
   GPSEntry gpsData;
   ublox_get_last_data(&gpsData);
-  if (gpsData.fix >= 3) {
-        flaga |= 0x80;
-      } else {
-        flaga &= ~0x80;
-      }
+
   uint8_t lat_d = (uint8_t) abs(gpsData.lat_raw / 10000000);
   uint32_t lat_fl = (uint32_t) abs(abs(gpsData.lat_raw) - lat_d * 10000000) / 1000;
   uint8_t lon_d = (uint8_t) abs(gpsData.lon_raw / 10000000);
   uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
 
-  sprintf(buf_rtty, "$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%s,%d,%d.%d,%d,%d,%d,%02x",
+  if (gpsData.fix >= 3) {
+      flaga |= 0x80;
+  } else {
+      // No GPS fix.
+      flaga &= ~0x80;
+      // Null out lat/long data to avoid spamming invalid positions all over the map.
+      lat_d = 0;
+      lat_fl = 0;
+      lon_d = 0;
+      lon_fl = 0;
+  }
+ 
+  // HORUS RTTY compatible sentences.
+  sprintf(buf_rtty, "$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%d,%d,%d",
 			  callsign,
-			  send_cun,
-              gpsData.hours, gpsData.minutes, gpsData.seconds,
-              gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
-              gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
-              (gpsData.alt_raw / 1000),
-              gpsData.speed_raw,
-              rtty_comment,
-              si4032_temperature,
-              voltage/100, voltage-voltage/100*100,
-              gpsData.sats_raw,
-              gpsData.ok_packets,
-              gpsData.bad_packets,
-              flaga);
-  CRC_rtty = gps_CRC16_checksum(buf_rtty + 4);
+			  send_count,
+        gpsData.hours, gpsData.minutes, gpsData.seconds,
+        gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
+        gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
+        (gpsData.alt_raw / 1000),
+        gpsData.speed_raw,
+        gpsData.sats_raw,
+        voltage*10,
+        si4032_temperature
+        );
+  CRC_rtty = gps_CRC16_checksum(buf_rtty + 5);
   sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
   rtty_buf = buf_rtty;
   radio_enable_tx();
   tx_on = 1;
 
-  send_cun++;
+  send_count++;
 }
 
 uint16_t gps_CRC16_checksum(char *string) {
