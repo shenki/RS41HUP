@@ -4,10 +4,12 @@ SET(CMAKE_SYSTEM_NAME "Generic")
 SET(CMAKE_SYSTEM_VERSION 1)
 
 
+#
+# Set Toolchain Path Below
+#
+
 if (UNIX)
-    set(TOOLCHAIN_DIR "/opt/gcc-arm-none-eabi-6-2017-q1-update/bin/")
-    #  set(CMAKE_C_COMPILER "/opt/gcc-arm-none-eabi-5_4-2016q3/bin/arm-none-eabi-gcc")
-    #  set(CMAKE_CXX_COMPILER "/opt/gcc-arm-none-eabi-5_4-2016q3/bin/arm-none-eabi-g++")
+    set(TOOLCHAIN_DIR "$ENV{HOME}/opt/gcc-arm-none-eabi/bin")
     CMAKE_FORCE_C_COMPILER(${TOOLCHAIN_DIR}/arm-none-eabi-gcc GNU)
     CMAKE_FORCE_CXX_COMPILER(${TOOLCHAIN_DIR}/arm-none-eabi-g++ GNU)
 else ()
@@ -56,7 +58,7 @@ add_custom_target(program
         DEPENDS ${PROJECT_NAME}.elf
 
         if (UNIX)
-            #TODO
+            COMMAND st-flash --reset write ${BIN_FILE} 0x08000000
         else ()
             COMMAND D:/Programy/stlink-1.3.0-win64/bin/st-flash --reset write ${BIN_FILE} 0x08000000
         endif ()

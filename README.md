@@ -1,11 +1,23 @@
 # RS41HUP (Ham Use Project)
-Firmware for RS41 for HAM use<br>
+Firmware for RS41 for HAM use.
+
 It is possible to recycle RS41-SGP sondes for amateur radio use without any electrical changes! You just have to build a new firmware (this one) and apply it via a cheap adaptor "ST-Linkv2". Modified sonde now transmits on defineable frequenca in 70cm band GPS and telemetry data in FSK RTTY format which is used by HAB projects and additionally it transmits APRS packets on a seperately defineable TX frequency.
 
 Released under GPL v2
 
 
+
+# Linux / OSX:
+* Grab the latest GNU ARM Embedded toolchain from here: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
+* Extract the tarball to somewhere useful. In my case i'm using ~/opt/
+* Within the RS41HUP directory:
+  * Edit CMakeLists.txt and set the correct path to the un-tar'd directory.
+  * `cmake .`
+  * `make`
+
+
 # Windows:
+(Note, may be broken - currently targeting Linux / OSX builds)
 
 Use:
 https://www.wyzbee.com/download/Utilities/Software/CoIDE-1.7.8.exe
@@ -13,15 +25,6 @@ https://www.wyzbee.com/download/Utilities/Software/CoIDE-1.7.8.exe
 And:
 https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q3-update/+download/gcc-arm-none-eabi-5_4-2016q3-20160926-win32.exe
 
-
-# Linux:
-Maybe you have to set correct path to gcc-arm-none-eabi in CMakeLists.txt.<br><br>
-
-cd into main folder
-
-cmake .
-
-make
 
 # Configuration
 All configs in ```config.h```
