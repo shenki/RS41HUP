@@ -20,10 +20,8 @@
 #include "ublox.h"
 #include "delay.h"
 #include "aprs.h"
-///////////////////////////// test mode /////////////
-const unsigned char test = 0; // 0 - normal, 1 - short frame only counter, height, flag
+
 char callsign[15] = {CALLSIGN};
-char rtty_comment[25] = {RTTY_COMMENT};
 
 #define GREEN  GPIO_Pin_7
 #define RED  GPIO_Pin_8
@@ -33,8 +31,9 @@ char status[2] = {'N'};
 int voltage;
 volatile int adc_bottom = 2000;
 
-volatile char flaga = 0;
-uint16_t CRC_rtty = 0x12ab;  //checksum
+volatile char flaga = 0; // GPS Status Flags
+volatile int led_enabled = 1; // Flag to disable LEDs at altitude.
+uint16_t CRC_rtty = 0x12ab;  //checksum (dummy initial value)
 char buf_rtty[200];
 
 volatile unsigned char pun = 0;
@@ -93,7 +92,7 @@ void TIM2_IRQHandler(void) {
       send_rtty_status = send_rtty((char *) rtty_buf);
       if (!disable_armed){
         if (send_rtty_status == rttyEnd) {
-          GPIO_SetBits(GPIOB, RED);
+          if (led_enabled) GPIO_SetBits(GPIOB, RED);
           if (*(++rtty_buf) == 0) {
             tx_on = 0;
             tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
@@ -102,10 +101,10 @@ void TIM2_IRQHandler(void) {
           }
         } else if (send_rtty_status == rttyOne) {
           radio_rw_register(0x73, RTTY_DEVIATION, 1);
-          GPIO_SetBits(GPIOB, RED);
+          if (led_enabled) GPIO_SetBits(GPIOB, RED);
         } else if (send_rtty_status == rttyZero) {
           radio_rw_register(0x73, 0x00, 1);
-          GPIO_ResetBits(GPIOB, RED);
+          if (led_enabled) GPIO_ResetBits(GPIOB, RED);
         }
       }
     }
@@ -119,12 +118,12 @@ void TIM2_IRQHandler(void) {
     if (--cun == 0) {
       if (pun) {
         // Clear Green LED.
-        GPIO_SetBits(GPIOB, GREEN);
+        if (led_enabled) GPIO_SetBits(GPIOB, GREEN);
         pun = 0;
       } else {
         // If we have GPS lock, set LED
         if (flaga & 0x80) {
-          GPIO_ResetBits(GPIOB, GREEN);
+          if (led_enabled) GPIO_ResetBits(GPIOB, GREEN);
         }
         pun = 1;
       }
@@ -202,15 +201,25 @@ void send_rtty_packet() {
 
   if (gpsData.fix >= 3) {
       flaga |= 0x80;
+      // Disable LEDs if altitude is > 1000m. (Power saving? Maybe?)
+      if ((gpsData.alt_raw / 1000) > 1000){
+        led_enabled = 0;
+      } else {
+        led_enabled = 1;
+      }
   } else {
       // No GPS fix.
       flaga &= ~0x80;
+      led_enabled = 1; // Enable LEDs when there is no GPS fix (i.e. during startup)
+      
       // Null out lat/long data to avoid spamming invalid positions all over the map.
       lat_d = 0;
       lat_fl = 0;
       lon_d = 0;
       lon_fl = 0;
   }
+
+
  
   // HORUS RTTY compatible sentences.
   sprintf(buf_rtty, "$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%d,%d,%d",

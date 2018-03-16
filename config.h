@@ -12,6 +12,8 @@
 
 //**************config**********************
 #define CALLSIGN "N0CALL" // put your RTTY callsign here, max. 15 characters
+
+// Note - APRS functionality currently disabled.
 #define APRS_CALLSIGN "NOCALL" // put your APRS callsign here, 6 characters. If your callsign is shorter add spaces
 #define APRS_SSID 'B' // put your APRS SSID here
 // 0 --> Your primary station usually fixed and message capable
