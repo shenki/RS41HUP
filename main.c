@@ -68,67 +68,70 @@ void TIM2_IRQHandler(void) {
   if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
     TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 
-    if (aprs_is_active()){
-      aprs_timer_handler();
-    } else {
-      if (ALLOW_DISABLE_BY_BUTTON){
-        if (ADCVal[1] > adc_bottom){
-          button_pressed++;
-          if (button_pressed > (RTTY_SPEED / 3)){
-            disable_armed = 1;
-            GPIO_SetBits(GPIOB, RED);
-            GPIO_SetBits(GPIOB, GREEN);
-          }
-        } else {
-          if (disable_armed){
-            GPIO_SetBits(GPIOA, GPIO_Pin_12);
-          }
-          button_pressed = 0;
+    if (ALLOW_DISABLE_BY_BUTTON){
+      if (ADCVal[1] > adc_bottom){
+        button_pressed++;
+        if (button_pressed > (RTTY_SPEED / 3)){
+          disable_armed = 1;
+          GPIO_SetBits(GPIOB, RED);
+          //GPIO_SetBits(GPIOB, GREEN);
         }
+      } else {
+        if (disable_armed){
+          GPIO_SetBits(GPIOA, GPIO_Pin_12);
+        }
+        button_pressed = 0;
+      }
+
     	if (button_pressed == 0) {
     	  adc_bottom = ADCVal[1] * 1.1;	// dynamical reference for power down level
-		}
-      }
-      if (tx_on) {
-        send_rtty_status = send_rtty((char *) rtty_buf);
-        if (!disable_armed){
-          if (send_rtty_status == rttyEnd) {
-            GPIO_SetBits(GPIOB, RED);
-            if (*(++rtty_buf) == 0) {
-              tx_on = 0;
-              tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
-              tx_enable = 0;
-              //radio_disable_tx(); // Don't turn off the transmitter!
-            }
-          } else if (send_rtty_status == rttyOne) {
-            radio_rw_register(0x73, RTTY_DEVIATION, 1);
-            GPIO_SetBits(GPIOB, RED);
-          } else if (send_rtty_status == rttyZero) {
-            radio_rw_register(0x73, 0x00, 1);
-            GPIO_ResetBits(GPIOB, RED);
+  	  }
+    }
+      
+    if (tx_on) {
+      // RTTY Symbol selection logic.
+      send_rtty_status = send_rtty((char *) rtty_buf);
+      if (!disable_armed){
+        if (send_rtty_status == rttyEnd) {
+          GPIO_SetBits(GPIOB, RED);
+          if (*(++rtty_buf) == 0) {
+            tx_on = 0;
+            tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+            tx_enable = 0;
+            //radio_disable_tx(); // Don't turn off the transmitter!
           }
+        } else if (send_rtty_status == rttyOne) {
+          radio_rw_register(0x73, RTTY_DEVIATION, 1);
+          GPIO_SetBits(GPIOB, RED);
+        } else if (send_rtty_status == rttyZero) {
+          radio_rw_register(0x73, 0x00, 1);
+          GPIO_ResetBits(GPIOB, RED);
         }
-      }
-      if (!tx_on && --tx_on_delay == 0) {
-        tx_enable = 1;
-        tx_on_delay--;
-      }
-      if (--cun == 0) {
-        if (pun) {
-          GPIO_ResetBits(GPIOB, GREEN);
-          pun = 0;
-        } else {
-          if (flaga & 0x80) {
-            GPIO_SetBits(GPIOB, GREEN);
-          }
-          pun = 1;
-        }
-        cun = 200;
       }
     }
 
-  }
+    if (!tx_on && --tx_on_delay == 0) {
+      tx_enable = 1;
+      tx_on_delay--;
+    }
 
+    // Green LED Blinking Logic
+    if (--cun == 0) {
+      if (pun) {
+        // Clear Green LED.
+        GPIO_SetBits(GPIOB, GREEN);
+        pun = 0;
+      } else {
+        // If we have GPS lock, set LED
+        if (flaga & 0x80) {
+          GPIO_ResetBits(GPIOB, GREEN);
+        }
+        pun = 1;
+      }
+      // Wait 200 symbols.
+      cun = 200;
+    }
+  }
 }
 
 int main(void) {
@@ -144,6 +147,8 @@ int main(void) {
   ublox_init();
 
   GPIO_SetBits(GPIOB, RED);
+  // NOTE - Green LED is inverted. (Reset to activate, Set to deactivate)
+  GPIO_SetBits(GPIOB, GREEN);
   USART_SendData(USART3, 0xc);
 
   radio_soft_reset();
