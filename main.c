@@ -211,15 +211,13 @@ void send_rtty_packet() {
       // No GPS fix.
       flaga &= ~0x80;
       led_enabled = 1; // Enable LEDs when there is no GPS fix (i.e. during startup)
-      
+
       // Null out lat/long data to avoid spamming invalid positions all over the map.
       lat_d = 0;
       lat_fl = 0;
       lon_d = 0;
       lon_fl = 0;
   }
-
-
  
   // HORUS RTTY compatible sentences.
   sprintf(buf_rtty, "$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%d,%d,%d",
