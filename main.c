@@ -21,20 +21,33 @@
 #include "delay.h"
 #include "aprs.h"
 
-char callsign[15] = {CALLSIGN};
+// IO Pins Definitions. The state of these pins are initilised in init.c
+#define GREEN  GPIO_Pin_7 // Inverted
+#define RED  GPIO_Pin_8 // Non-Inverted (?)
 
-#define GREEN  GPIO_Pin_7
-#define RED  GPIO_Pin_8
 
+// Transmit Modulation Switching
+#define STARTUP 0
+#define RTTY 1
+#define FSK_4 2
+#define FSK_2 3
+volatile int current_mode = STARTUP;
+
+// Telemetry Data to Transmit - used in RTTY & MFSK packet generation functions.
 unsigned int send_count;        //frame counter
-char status[2] = {'N'};
 int voltage;
-volatile int adc_bottom = 2000;
+int8_t si4032_temperature;
+GPSEntry gpsData;
 
-volatile char flaga = 0; // GPS Status Flags
-volatile int led_enabled = 1; // Flag to disable LEDs at altitude.
+char callsign[15] = {CALLSIGN};
+char status[2] = {'N'};
 uint16_t CRC_rtty = 0x12ab;  //checksum (dummy initial value)
 char buf_rtty[200];
+
+// Volatile Variables, used within interrupts.
+volatile int adc_bottom = 2000;
+volatile char flaga = 0; // GPS Status Flags
+volatile int led_enabled = 1; // Flag to disable LEDs at altitude.
 
 volatile unsigned char pun = 0;
 volatile unsigned int cun = 10;
@@ -42,11 +55,14 @@ volatile unsigned char tx_on = 0;
 volatile unsigned int tx_on_delay;
 volatile unsigned char tx_enable = 0;
 rttyStates send_rtty_status = rttyZero;
-volatile char *rtty_buf;
+volatile char *tx_buffer;
 volatile uint16_t button_pressed = 0;
 volatile uint8_t disable_armed = 0;
 
+// Function Definitions
+void collect_telemetry_data();
 void send_rtty_packet();
+void send_mfsk_packet();
 uint16_t gps_CRC16_checksum (char *string);
 
 
@@ -62,6 +78,11 @@ void USART1_IRQHandler(void) {
     USART_ReceiveData(USART1);
   }
 }
+
+//
+// Symbol Timing Interrupt
+// In here symbol transmission occurs.
+//
 
 void TIM2_IRQHandler(void) {
   if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
@@ -82,33 +103,62 @@ void TIM2_IRQHandler(void) {
         button_pressed = 0;
       }
 
-    	if (button_pressed == 0) {
-    	  adc_bottom = ADCVal[1] * 1.1;	// dynamical reference for power down level
-  	  }
+      if (button_pressed == 0) {
+        adc_bottom = ADCVal[1] * 1.1; // dynamical reference for power down level
+      }
     }
       
     if (tx_on) {
       // RTTY Symbol selection logic.
-      send_rtty_status = send_rtty((char *) rtty_buf);
-      if (!disable_armed){
-        if (send_rtty_status == rttyEnd) {
-          if (led_enabled) GPIO_SetBits(GPIOB, RED);
-          if (*(++rtty_buf) == 0) {
-            tx_on = 0;
-            tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
-            tx_enable = 0;
-            //radio_disable_tx(); // Don't turn off the transmitter!
+      if(current_mode == RTTY){
+        send_rtty_status = send_rtty((char *) tx_buffer);
+
+        if (!disable_armed){
+          if (send_rtty_status == rttyEnd) {
+            if (led_enabled) GPIO_SetBits(GPIOB, RED);
+            if (*(++tx_buffer) == 0) {
+              tx_on = 0;
+              // Reset the TX Delay counter, which is decremented at the symbol rate.
+              tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+              tx_enable = 0;
+              //radio_disable_tx(); // Don't turn off the transmitter!
+            }
+          } else if (send_rtty_status == rttyOne) {
+            radio_rw_register(0x73, RTTY_DEVIATION, 1);
+            if (led_enabled) GPIO_SetBits(GPIOB, RED);
+          } else if (send_rtty_status == rttyZero) {
+            radio_rw_register(0x73, 0x00, 1);
+            if (led_enabled) GPIO_ResetBits(GPIOB, RED);
           }
-        } else if (send_rtty_status == rttyOne) {
-          radio_rw_register(0x73, RTTY_DEVIATION, 1);
-          if (led_enabled) GPIO_SetBits(GPIOB, RED);
-        } else if (send_rtty_status == rttyZero) {
-          radio_rw_register(0x73, 0x00, 1);
-          if (led_enabled) GPIO_ResetBits(GPIOB, RED);
         }
+      } else if (current_mode == FSK_4) {
+        // 4FSK Symbol Selection Logic
+        // Get Symbol to transmit.
+
+        // Set Symbol.
+
+        // Halt modulation, reset inter-transmission timer.
+        tx_on = 0;
+        tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+        tx_enable = 0;
+
+      } else if (current_mode == FSK_2) {
+        // 2FSK Symbol Selection Logic
+        // TODO
+
+        // Halt modulation, reset inter-transmission timer.
+        tx_on = 0;
+        tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+        tx_enable = 0;
+      } else{
+        // Ummmm. 
       }
     }
 
+    // Delay between Transmissions Logic.
+    // tx_on_delay is set at the end of a RTTY transmission above, and counts down
+    // at the interrupt rate. When it hits zero, we set tx_enable to 1, which allows
+    // the main loop to continue.
     if (!tx_on && --tx_on_delay == 0) {
       tx_enable = 1;
       tx_on_delay--;
@@ -168,17 +218,31 @@ int main(void) {
 
   // ADC configuration
   radio_rw_register(0x0f, 0x80, 1);
-  rtty_buf = buf_rtty;
+  tx_buffer = buf_rtty;
   tx_on = 0;
   tx_enable = 1;
 
-  aprs_init();
   radio_enable_tx();
 
 
   while (1) {
+    // Don't do anything until the previous transmission has finished.
     if (tx_on == 0 && tx_enable) {
-        send_rtty_packet();
+        if (current_mode == STARTUP){
+          // Grab telemetry information.
+          collect_telemetry_data();
+
+          // Now Startup a RTTY Transmission
+          current_mode = RTTY;
+          send_rtty_packet();
+        } else if (current_mode == RTTY){
+          // We've just transmitted a RTTY packet, now configure for 4FSK.
+          current_mode = FSK_4;
+          send_mfsk_packet();
+        } else {
+          // We've finished the 4FSK transmission, grab new data.
+          current_mode = STARTUP;
+        }
     } else {
       NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
       __WFI();
@@ -186,18 +250,13 @@ int main(void) {
   }
 }
 
-void send_rtty_packet() {
-  start_bits = RTTY_PRE_START_BITS;
-  int8_t si4032_temperature = radio_read_temperature();
 
+void collect_telemetry_data() {
+
+  send_count++;
+  si4032_temperature = radio_read_temperature();
   voltage = ADCVal[0] * 600 / 4096;
-  GPSEntry gpsData;
   ublox_get_last_data(&gpsData);
-
-  uint8_t lat_d = (uint8_t) abs(gpsData.lat_raw / 10000000);
-  uint32_t lat_fl = (uint32_t) abs(abs(gpsData.lat_raw) - lat_d * 10000000) / 1000;
-  uint8_t lon_d = (uint8_t) abs(gpsData.lon_raw / 10000000);
-  uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
 
   if (gpsData.fix >= 3) {
       flaga |= 0x80;
@@ -212,17 +271,26 @@ void send_rtty_packet() {
       flaga &= ~0x80;
       led_enabled = 1; // Enable LEDs when there is no GPS fix (i.e. during startup)
 
-      // Null out lat/long data to avoid spamming invalid positions all over the map.
-      lat_d = 0;
-      lat_fl = 0;
-      lon_d = 0;
-      lon_fl = 0;
+      // Null out lat / lon data to avoid spamming invalid positions all over the map.
+      gpsData.lat_raw = 0;
+      gpsData.lon_raw = 0;
   }
+}
+
+
+void send_rtty_packet() {
+  // Write a RTTY packet into the tx buffer, and start transmission.
+
+  // Convert raw lat/lon values into degrees and decimal degree values.
+  uint8_t lat_d = (uint8_t) abs(gpsData.lat_raw / 10000000);
+  uint32_t lat_fl = (uint32_t) abs(abs(gpsData.lat_raw) - lat_d * 10000000) / 1000;
+  uint8_t lon_d = (uint8_t) abs(gpsData.lon_raw / 10000000);
+  uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
  
-  // HORUS RTTY compatible sentences.
+  // Produce a RTTY Sentence (Compatible with the existing HORUS RTTY payloads)
   sprintf(buf_rtty, "$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%d,%d,%d",
-			  callsign,
-			  send_count,
+        callsign,
+        send_count,
         gpsData.hours, gpsData.minutes, gpsData.seconds,
         gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
         gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
@@ -232,14 +300,29 @@ void send_rtty_packet() {
         voltage*10,
         si4032_temperature
         );
+  // Calculate and append CRC16 checksum to end of sentence.
   CRC_rtty = gps_CRC16_checksum(buf_rtty + 5);
   sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
-  rtty_buf = buf_rtty;
+
+  // Point the TX buffer at the temporary RTTY packet buffer.
+  tx_buffer = buf_rtty;
+
+  // Enable the radio, and set the tx_on flag to 1.
+  start_bits = RTTY_PRE_START_BITS;
   radio_enable_tx();
   tx_on = 1;
-
-  send_count++;
+  // From here the timer interrupt handles things.
 }
+
+
+void send_mfsk_packet(){
+  // Generate a MFSK Binary Packet
+
+  // Enable the radio, and set the tx_on flag to 1.
+  radio_enable_tx();
+  tx_on = 1;
+}
+
 
 uint16_t gps_CRC16_checksum(char *string) {
   uint16_t crc = 0xffff;
