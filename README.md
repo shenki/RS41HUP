@@ -5,7 +5,7 @@ It is possible to recycle RS41-SGP sondes for amateur radio use without any elec
 
 Released under GPL v2.
 
-Original Repository: https://github.com/Qyon/STM32_RTTY, though this for is based on [DF8OE's version](https://github.com/df8oe/RS41HUP).
+Original Repository: https://github.com/Qyon/STM32_RTTY, though this fork is based on [DF8OE's version](https://github.com/df8oe/RS41HUP).
 
 Modifications by Mark Jessop <vk5qi@rfhead.net> include:
 * Compatability with existing Project Horus RTTY Formats.
