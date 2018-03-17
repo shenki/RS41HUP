@@ -37,6 +37,8 @@ Either:
 * Use the ST Micro ST-LINK utility (windows only it seems?), or
 * [stlink](https://github.com/texane/stlink) under Linux/OSX (though I haven't had much success with this yet...)
 
+Refer to [./docs/programming_header.md](this file) for programming header pinouts.
+
 # Configuration
 All configs in ```config.h```
 
