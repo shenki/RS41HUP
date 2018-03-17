@@ -1,23 +1,30 @@
-# RS41HUP (Ham Use Project)
+# RS41HUP (Ham Use Project) - Project Horus Fork
 Firmware for RS41 for HAM use.
 
-It is possible to recycle RS41-SGP sondes for amateur radio use without any electrical changes! You just have to build a new firmware (this one) and apply it via a cheap adaptor "ST-Linkv2". Modified sonde now transmits on defineable frequenca in 70cm band GPS and telemetry data in FSK RTTY format which is used by HAB projects and additionally it transmits APRS packets on a seperately defineable TX frequency.
+It is possible to recycle RS41-SGP sondes for amateur radio use without any electrical changes! You just have to build a new firmware (this one) and apply it via a cheap programmer, the "ST-Linkv2" (or alternatives). The modified sonde can now transmit on a user-defined frequency in the 70cm band, with Habhub-compatible RTTY telemetry!
 
-Released under GPL v2
+Released under GPL v2.
+
+Original Repository: https://github.com/Qyon/STM32_RTTY, though this for is based on [DF8OE's version](https://github.com/df8oe/RS41HUP).
+
+Modifications by Mark Jessop <vk5qi@rfhead.net> include:
+* Compatability with existing Project Horus RTTY Formats.
+* Support for 4FSK and 2FSK binary telemetry (to be decoded by a future codec2-dev application)
+* Removed APRS support - no 70cm APRS infrastructure in Australia, so not really useful to us.
 
 
-
-# Linux / OSX:
+# Compilation
+## Linux / OSX:
 * Grab the latest GNU ARM Embedded toolchain from here: https://developer.arm.com/open-source/gnu-toolchain/gnu-rm/downloads
-* Extract the tarball to somewhere useful. In my case i'm using ~/opt/
+* Extract the tarball to somewhere useful. In my case I'm using ~/opt/
 * Within the RS41HUP directory:
   * Edit CMakeLists.txt and set the correct path to the un-tar'd directory.
   * `cmake .`
   * `make`
 
 
-# Windows:
-(Note, may be broken - currently targeting Linux / OSX builds)
+## Windows:
+(Note, is likely broken - currently targeting Linux / OSX builds)
 
 Use:
 https://www.wyzbee.com/download/Utilities/Software/CoIDE-1.7.8.exe
@@ -25,18 +32,17 @@ https://www.wyzbee.com/download/Utilities/Software/CoIDE-1.7.8.exe
 And:
 https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q3-update/+download/gcc-arm-none-eabi-5_4-2016q3-20160926-win32.exe
 
+# Programming
+Either:
+* Use the ST Micro ST-LINK utility (windows only it seems?), or
+* [stlink](https://github.com/texane/stlink) under Linux/OSX (though I haven't had much success with this yet...)
 
 # Configuration
 All configs in ```config.h```
 
 * ```CALLSIGN``` RTTY callsign
-* ```APRS_CALLSIGN``` APRS callsign, 6 characters. If your callsign is shorter add spaces
-* ```APRS_SSID``` APRS SSID
-* ```APRS_COMMENT``` APRS comment
-* ```RTTY_TO_APRS_RATIO``` number of RTTY frames between each APRS frame
 * ```RTTY_FREQUENCY``` RTTY frequency in MHz
-* ```APRS_FREQUENCY``` APRS frequency in MHz
-* ```RTTY_DEVIATION``` RTTY shift configurable in 270Hz steps
+* ```RTTY_DEVIATION``` RTTY shift configurable in 270Hz steps (Note that ths 4FSK mode uses 270 Hz spacing across it's 4 tones)
 * ```RTTY_SPEED``` RTTY speed in bauds
 * ```RTTY_7BIT``` Use 7 bit RTTY
 * ```RTTY_USE_2_STOP_BITS``` use 2 stop bits
@@ -53,14 +59,10 @@ Have a nice day ;)
  * 23.01.2017 - Test APRS code, small fixes in GPS code by SQ5RWU
  * 06.06.2017 - APRS code fix, some code cleanup
  * June 2017 - starting with Linux support, making configuration more flexible by DF8OE
+ * March 2018 - Addition of 4FSK mode support by Mark VK5QI
 
 
 #TODO
- * Adding support for EmbiTZ IDE
- * Adding support for platform independent IDE Eclipse
- * More APRS config options
- * Temperature and moisture sensor
- * Pressure sensor
- * implementing protocol for using external devices on extension header
+ * Temperature and moisture sensor support (temperature should be the easiest to get going first...)
+ * Implementing protocol for using external devices on extension header
  * Configuration via extension header (serial connection) without need for reflashing firmware
- * Possibly add configuration "wireless" using RFID loop present in sonde
