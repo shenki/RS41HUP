@@ -413,10 +413,14 @@ void send_mfsk_packet(){
 
   BinaryPacket.Checksum = (uint16_t)array_CRC16_checksum((char*)&BinaryPacket,sizeof(BinaryPacket)-2);
 
-  int coded_len = horus_l2_encode_tx_packet((unsigned char*)buf_mfsk,(unsigned char*)&BinaryPacket,sizeof(BinaryPacket));
+  // Write Preamble characters into mfsk buffer.
+  sprintf(buf_mfsk, "\x1b\x1b\x1b\x1b");
 
-  packet_length = coded_len;
+  // Encode the packet, and write into the mfsk buffer.
+  int coded_len = horus_l2_encode_tx_packet((unsigned char*)buf_mfsk+4,(unsigned char*)&BinaryPacket,sizeof(BinaryPacket));
 
+  // Data to transmit is the coded packet length, plus the 4-byte preamble.
+  packet_length = coded_len+4;
   tx_buffer = buf_mfsk;
 
   // Enable the radio, and set the tx_on flag to 1.
