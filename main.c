@@ -20,7 +20,9 @@
 #include "ublox.h"
 #include "delay.h"
 #include "aprs.h"
+#include "util.h"
 #include "mfsk.h"
+#include "horus_l2.h"
 
 // IO Pins Definitions. The state of these pins are initilised in init.c
 #define GREEN  GPIO_Pin_7 // Inverted
@@ -62,6 +64,26 @@ volatile uint16_t current_mfsk_byte = 0;
 volatile uint16_t packet_length = 0;
 volatile uint16_t button_pressed = 0;
 volatile uint8_t disable_armed = 0;
+
+
+// Binary Packet Format
+struct TBinaryPacket
+{
+uint8_t   PayloadID;
+uint16_t  Counter;
+uint8_t   Hours;
+uint8_t   Minutes;
+uint8_t   Seconds;
+float   Latitude;
+float   Longitude;
+uint16_t    Altitude;
+uint8_t   Speed; // Speed in Knots (1-255 knots)
+uint8_t   Sats;
+int8_t   Temp; // Twos Complement Temp value.
+uint8_t   BattVoltage; // 0 = 0v, 255 = 5.0V, linear steps in-between.
+uint16_t Checksum; // CRC16-CCITT Checksum.
+};  //  __attribute__ ((packed));
+
 
 // Function Definitions
 void collect_telemetry_data();
@@ -347,7 +369,7 @@ void send_rtty_packet() {
         );
   
   // Calculate and append CRC16 checksum to end of sentence.
-  CRC_rtty = gps_CRC16_checksum(buf_rtty + 5);
+  CRC_rtty = string_CRC16_checksum(buf_rtty + 5);
   sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
 
   // Point the TX buffer at the temporary RTTY packet buffer.
@@ -363,7 +385,37 @@ void send_rtty_packet() {
 
 void send_mfsk_packet(){
   // Generate a MFSK Binary Packet
-  packet_length = mfsk_test_bits(buf_mfsk);
+  //packet_length = mfsk_test_bits(buf_mfsk);
+
+  // Sanitise and convert some of the data.
+  if(gpsData.alt_raw < 0){
+    gpsData.alt_raw = 0;
+  }
+  float float_lat = gpsData.lat_raw / 10000000;
+  float float_lon = gpsData.lon_raw / 10000000;
+
+  uint8_t volts_scaled = (uint8_t)(255*(float)voltage/500.0);
+
+  // Assemble a binary packet
+  struct TBinaryPacket BinaryPacket;
+  BinaryPacket.PayloadID = 0x01;
+  BinaryPacket.Counter = send_count;
+  BinaryPacket.Hours = gpsData.hours;
+  BinaryPacket.Minutes = gpsData.minutes;
+  BinaryPacket.Seconds = gpsData.seconds;
+  BinaryPacket.Latitude = float_lat;
+  BinaryPacket.Longitude = float_lon;
+  BinaryPacket.Altitude = (uint16_t)(gpsData.alt_raw/1000);
+  BinaryPacket.Speed = (uint8_t)gpsData.speed_raw;
+  BinaryPacket.BattVoltage = volts_scaled;
+  BinaryPacket.Sats = gpsData.sats_raw;
+  BinaryPacket.Temp = si4032_temperature;
+
+  BinaryPacket.Checksum = (uint16_t)array_CRC16_checksum((char*)&BinaryPacket,sizeof(BinaryPacket)-2);
+
+  int coded_len = horus_l2_encode_tx_packet((unsigned char*)buf_mfsk,(unsigned char*)&BinaryPacket,sizeof(BinaryPacket));
+
+  packet_length = coded_len;
 
   tx_buffer = buf_mfsk;
 
@@ -373,20 +425,6 @@ void send_mfsk_packet(){
 }
 
 
-uint16_t gps_CRC16_checksum(char *string) {
-  uint16_t crc = 0xffff;
-  char i;
-  while (*(string) != 0) {
-    crc = crc ^ (*(string++) << 8);
-    for (i = 0; i < 8; i++) {
-      if (crc & 0x8000)
-        crc = (uint16_t) ((crc << 1) ^ 0x1021);
-      else
-        crc <<= 1;
-    }
-  }
-  return crc;
-}
 
 
 #ifdef  DEBUG
