@@ -20,6 +20,7 @@
 #include "ublox.h"
 #include "delay.h"
 #include "aprs.h"
+#include "mfsk.h"
 
 // IO Pins Definitions. The state of these pins are initilised in init.c
 #define GREEN  GPIO_Pin_7 // Inverted
@@ -43,6 +44,7 @@ char callsign[15] = {CALLSIGN};
 char status[2] = {'N'};
 uint16_t CRC_rtty = 0x12ab;  //checksum (dummy initial value)
 char buf_rtty[200];
+char buf_mfsk[200];
 
 // Volatile Variables, used within interrupts.
 volatile int adc_bottom = 2000;
@@ -56,6 +58,8 @@ volatile unsigned int tx_on_delay;
 volatile unsigned char tx_enable = 0;
 rttyStates send_rtty_status = rttyZero;
 volatile char *tx_buffer;
+volatile uint16_t current_mfsk_byte = 0;
+volatile uint16_t packet_length = 0;
 volatile uint16_t button_pressed = 0;
 volatile uint8_t disable_armed = 0;
 
@@ -134,22 +138,55 @@ void TIM2_IRQHandler(void) {
       } else if (current_mode == FSK_4) {
         // 4FSK Symbol Selection Logic
         // Get Symbol to transmit.
+        int mfsk_symbol = send_mfsk(tx_buffer[current_mfsk_byte]);
 
-        // Set Symbol.
-
-        // Halt modulation, reset inter-transmission timer.
-        tx_on = 0;
-        tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
-        tx_enable = 0;
+        if(mfsk_symbol == -1){
+          // Reached the end of the current character, increment the current-byte pointer.
+          if (current_mfsk_byte++ == packet_length) {
+              // End of the packet. Reset Counters and stop modulation.
+              radio_rw_register(0x73, 0x00, 1); // Idle at Symbol 0.
+              current_mfsk_byte = 0;
+              tx_on = 0;
+              // Reset the TX Delay counter, which is decremented at the symbol rate.
+              tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+              tx_enable = 0;
+              
+          } else {
+            // We've now advanced to the next byte, grab the first symbol from it.
+            mfsk_symbol = send_mfsk(tx_buffer[current_mfsk_byte]);
+          }
+        }
+        // Set the symbol!
+        if(mfsk_symbol != -1){
+          radio_rw_register(0x73, (uint8_t)mfsk_symbol, 1);
+        }
+        
 
       } else if (current_mode == FSK_2) {
         // 2FSK Symbol Selection Logic
-        // TODO
+        // Get Symbol to transmit.
+        int mfsk_symbol = send_2fsk(tx_buffer[current_mfsk_byte]);
 
-        // Halt modulation, reset inter-transmission timer.
-        tx_on = 0;
-        tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
-        tx_enable = 0;
+        if(mfsk_symbol == -1){
+          // Reached the end of the current character, increment the current-byte pointer.
+          if (current_mfsk_byte++ == packet_length) {
+              // End of the packet. Reset Counters and stop modulation.
+              radio_rw_register(0x73, 0x00, 1); // Idle at Symbol 0.
+              current_mfsk_byte = 0;
+              tx_on = 0;
+              // Reset the TX Delay counter, which is decremented at the symbol rate.
+              tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+              tx_enable = 0;
+              
+          } else {
+            // We've now advanced to the next byte, grab the first symbol from it.
+            mfsk_symbol = send_2fsk(tx_buffer[current_mfsk_byte]);
+          }
+        }
+        // Set the symbol!
+        if(mfsk_symbol != -1){
+          radio_rw_register(0x73, (uint8_t)mfsk_symbol, 1);
+        }
       } else{
         // Ummmm. 
       }
@@ -192,6 +229,7 @@ int main(void) {
   init_port();
 
   init_timer(RTTY_SPEED);
+
   delay_init();
   ublox_init();
 
@@ -221,6 +259,12 @@ int main(void) {
   tx_buffer = buf_rtty;
   tx_on = 0;
   tx_enable = 1;
+
+  // Why do we have to do this again?
+  spi_init();
+  radio_set_tx_frequency(RTTY_FREQUENCY);   
+  radio_rw_register(0x71, 0x00, 1);
+  init_timer(RTTY_SPEED);
 
   radio_enable_tx();
 
@@ -252,7 +296,7 @@ int main(void) {
 
 
 void collect_telemetry_data() {
-
+  // Assemble and proccess the telemetry data we need to construct our RTTY and MFSK packets.
   send_count++;
   si4032_temperature = radio_read_temperature();
   voltage = ADCVal[0] * 600 / 4096;
@@ -288,6 +332,7 @@ void send_rtty_packet() {
   uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
  
   // Produce a RTTY Sentence (Compatible with the existing HORUS RTTY payloads)
+  
   sprintf(buf_rtty, "$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%d,%d,%d",
         callsign,
         send_count,
@@ -300,6 +345,7 @@ void send_rtty_packet() {
         voltage*10,
         si4032_temperature
         );
+  
   // Calculate and append CRC16 checksum to end of sentence.
   CRC_rtty = gps_CRC16_checksum(buf_rtty + 5);
   sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
@@ -317,6 +363,9 @@ void send_rtty_packet() {
 
 void send_mfsk_packet(){
   // Generate a MFSK Binary Packet
+  packet_length = mfsk_test_bits(buf_mfsk);
+
+  tx_buffer = buf_mfsk;
 
   // Enable the radio, and set the tx_on flag to 1.
   radio_enable_tx();
