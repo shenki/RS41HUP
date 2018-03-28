@@ -41,7 +41,7 @@
 #define APRS_FREQUENCY  439.100f //Mhz middle frequency - Australian 70cm APRS Frequency
 
 //************RTTY Shift*********************** si4032
-#define RTTY_DEVIATION 0x2	// RTTY shift = RTTY_DEVIATION x 270Hz
+#define RTTY_DEVIATION 0x3	// RTTY shift = RTTY_DEVIATION x 270Hz
 
 //************RTTY Speed*********************** si4032
 #define RTTY_SPEED  100 // RTTY baudrate
