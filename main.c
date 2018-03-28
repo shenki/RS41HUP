@@ -24,7 +24,7 @@
 #include "mfsk.h"
 #include "horus_l2.h"
 
-// If enabled, print out MFSK packets as Hex
+// If enabled, print out binary packets as hex before and after coding.
 //#define MFSKDEBUG 1
 
 // IO Pins Definitions. The state of these pins are initilised in init.c
@@ -471,6 +471,7 @@ void send_mfsk_packet(){
     NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
     __WFI();
   }
+  _delay_ms(1000);
   #endif
 
   // Data to transmit is the coded packet length, plus the 4-byte preamble.
