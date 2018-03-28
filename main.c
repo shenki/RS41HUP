@@ -24,6 +24,9 @@
 #include "mfsk.h"
 #include "horus_l2.h"
 
+// If enabled, print out MFSK packets as Hex
+//#define MFSKDEBUG 1
+
 // IO Pins Definitions. The state of these pins are initilised in init.c
 #define GREEN  GPIO_Pin_7 // Inverted
 #define RED  GPIO_Pin_8 // Non-Inverted (?)
@@ -67,6 +70,7 @@ volatile uint8_t disable_armed = 0;
 
 
 // Binary Packet Format
+#pragma pack(push,1)
 struct TBinaryPacket
 {
 uint8_t   PayloadID;
@@ -83,6 +87,7 @@ int8_t   Temp; // Twos Complement Temp value.
 uint8_t   BattVoltage; // 0 = 0v, 255 = 5.0V, linear steps in-between.
 uint16_t Checksum; // CRC16-CCITT Checksum.
 };  //  __attribute__ ((packed));
+#pragma pack(pop)
 
 
 // Function Definitions
@@ -391,8 +396,8 @@ void send_mfsk_packet(){
   if(gpsData.alt_raw < 0){
     gpsData.alt_raw = 0;
   }
-  float float_lat = gpsData.lat_raw / 10000000;
-  float float_lon = gpsData.lon_raw / 10000000;
+  float float_lat = (float)gpsData.lat_raw / 10000000.0;
+  float float_lon = (float)gpsData.lon_raw / 10000000.0;
 
   uint8_t volts_scaled = (uint8_t)(255*(float)voltage/500.0);
 
@@ -413,11 +418,60 @@ void send_mfsk_packet(){
 
   BinaryPacket.Checksum = (uint16_t)array_CRC16_checksum((char*)&BinaryPacket,sizeof(BinaryPacket)-2);
 
+  #ifdef MFSKDEBUG
+  // Write BinaryPacket into the RTTY transmit buffer as hex
+  memcpy(buf_mfsk,&BinaryPacket,sizeof(struct TBinaryPacket));
+  sprintf(buf_rtty,"$$$$");
+  print_hex(buf_mfsk, sizeof(struct TBinaryPacket), buf_rtty+4);
+
+  //Configure for transmit
+  tx_buffer = buf_rtty;
+  // Enable the radio, and set the tx_on flag to 1.
+  start_bits = RTTY_PRE_START_BITS;
+  radio_enable_tx();
+  current_mode = RTTY;
+  tx_on = 1;
+
+  // Wait until transmit has finished.
+  while(tx_on){
+    NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
+    __WFI();
+  }
+  current_mode = FSK_4;
+  #endif
+
+
   // Write Preamble characters into mfsk buffer.
   sprintf(buf_mfsk, "\x1b\x1b\x1b\x1b");
-
   // Encode the packet, and write into the mfsk buffer.
   int coded_len = horus_l2_encode_tx_packet((unsigned char*)buf_mfsk+4,(unsigned char*)&BinaryPacket,sizeof(BinaryPacket));
+
+
+  #ifdef MFSKDEBUG
+  // Write the coded packet into the RTTY transmit buffer as hex
+  sprintf(buf_rtty,"$$$$");
+  print_hex(buf_mfsk, coded_len+4, buf_rtty+4);
+
+  //Configure for transmit
+  tx_buffer = buf_rtty;
+  // Enable the radio, and set the tx_on flag to 1.
+  start_bits = RTTY_PRE_START_BITS;
+  radio_enable_tx();
+  current_mode = RTTY;
+  tx_on = 1;
+
+  // Wait until transmit has finished.
+  while(tx_on){
+    NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
+    __WFI();
+  }
+  current_mode = FSK_4;
+  // Wait until tx_enable
+  while(tx_enable == 0){
+    NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
+    __WFI();
+  }
+  #endif
 
   // Data to transmit is the coded packet length, plus the 4-byte preamble.
   packet_length = coded_len+4;

@@ -733,29 +733,6 @@ int test_sending_bytes(int nbytes, float ber, int error_pattern) {
 
 /* unit test designed to run on a PC */
 
-int main(void) {
-    printf("test 0: BER: 0.00 ...........: %d\n", test_sending_bytes(22, 0.00, 0));
-    printf("test 1: BER: 0.01 ...........: %d\n", test_sending_bytes(22, 0.01, 0));
-    printf("test 2: BER: 0.05 ...........: %d\n", test_sending_bytes(22, 0.05, 0));
-
-    /* we expect this always to fail, as chance of > 3 errors/codeword is high */
-
-    printf("test 3: BER: 0.10 ...........: %d\n", test_sending_bytes(22, 0.10, 0));
-
-    /* -DINTERLEAVER will make this puppy pass */
-
-    printf("test 4: 8 bit burst error....: %d\n", test_sending_bytes(22, 0.00, 1));
-
-    /* Insert 2 errors in every codeword, the maximum correction
-       capability of a Golay (23,12) code. note this one will fail
-       with -DINTERLEAVER, as we can't guarantee <= 3 errors per
-       codeword after interleaving */
-
-    printf("test 5: 1 error every 12 bits: %d\n", test_sending_bytes(22, 0.00, 2));
-    return 0;
-}
-#endif
-
 /* Horus binary packet */
 
 struct TBinaryPacket
@@ -774,6 +751,32 @@ struct TBinaryPacket
     uint8_t     BattVoltage; // 0 = 0.5v, 255 = 2.0V, linear steps in-between.
     uint16_t    Checksum;    // CRC16-CCITT Checksum.
 }  __attribute__ ((packed));
+
+int main(void) {
+    int nbytes = sizeof(struct TBinaryPacket);
+    printf("test 0: BER: 0.00 ...........: %d\n", test_sending_bytes(nbytes, 0.00, 0));
+    printf("test 1: BER: 0.01 ...........: %d\n", test_sending_bytes(nbytes, 0.01, 0));
+    printf("test 2: BER: 0.05 ...........: %d\n", test_sending_bytes(nbytes, 0.05, 0));
+
+    /* we expect this always to fail, as chance of > 3 errors/codeword is high */
+
+    printf("test 3: BER: 0.10 ...........: %d\n", test_sending_bytes(nbytes, 0.10, 0));
+
+    /* -DINTERLEAVER will make this puppy pass */
+
+    printf("test 4: 8 bit burst error....: %d\n", test_sending_bytes(nbytes, 0.00, 1));
+
+    /* Insert 2 errors in every codeword, the maximum correction
+       capability of a Golay (23,12) code. note this one will fail
+       with -DINTERLEAVER, as we can't guarantee <= 3 errors per
+       codeword after interleaving */
+
+    printf("test 5: 1 error every 12 bits: %d\n", test_sending_bytes(nbytes, 0.00, 2));
+    return 0;
+}
+#endif
+
+
 
 #ifdef GEN_TX_BITS
 /* generate a file of tx_bits to modulate using fsk_horus.m for modem simulations */
