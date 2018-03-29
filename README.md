@@ -40,20 +40,7 @@ Either:
 Refer to [this file](./docs/programming_header.md) for programming header pinouts.
 
 # Configuration
-All configs in ```config.h```
-
-* ```CALLSIGN``` RTTY callsign
-* ```RTTY_FREQUENCY``` RTTY frequency in MHz
-* ```RTTY_DEVIATION``` RTTY shift configurable in 270Hz steps (Note that ths 4FSK mode uses 270 Hz spacing across it's 4 tones)
-* ```RTTY_SPEED``` RTTY speed in bauds
-* ```RTTY_7BIT``` Use 7 bit RTTY
-* ```RTTY_USE_2_STOP_BITS``` use 2 stop bits
-* ```TX_POWER``` Power 0-7, (7 means 42.95 mW@434.150 MHz measured on E4406A)
-* ```TX_DELAY``` Delay between frames in milliseconds
-* ```ALLOW_DISABLE_BY_BUTTON``` Allow disabling device using button
-
-
-Have a nice day ;)
+Configuration settings are located in [config.h](./config.h). Modify as appropriate before compiling/programming.
 
 #Changelog
  * 14.12.2016 - Reverse engineeded connections, initial hard work, resulting in working RTTY by SQ7FJB
@@ -61,7 +48,7 @@ Have a nice day ;)
  * 23.01.2017 - Test APRS code, small fixes in GPS code by SQ5RWU
  * 06.06.2017 - APRS code fix, some code cleanup
  * June 2017 - starting with Linux support, making configuration more flexible by DF8OE
- * March 2018 - Addition of 4FSK mode support by Mark VK5QI
+ * March 2018 - Addition of 4FSK binary mode support by Mark VK5QI
 
 
 #TODO

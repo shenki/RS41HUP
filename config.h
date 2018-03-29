@@ -20,6 +20,7 @@
 
 // TX Power
 #define TX_POWER  5 // PWR 0...7 0- MIN ... 7 - MAX
+// TODO: Check the below levels are correct. Apparnetly 7 - 50mW at 434 MHz.
 // 0 --> -1dBm
 // 1 --> 2dBm
 // 2 --> 5dBm
