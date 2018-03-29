@@ -10,10 +10,49 @@
 #else
 
 
-//**************config**********************
-#define CALLSIGN "N0CALL" // put your RTTY callsign here, max. 15 characters
+//************GLOBAL Settings*****************
+#define TRANSMIT_FREQUENCY  434.650f //Mhz middle frequency
+#define BAUD_RATE  100 // RTTY & MFSK Baud rate
 
-// Note - APRS functionality currently disabled.
+// Modulation Settings - Comment out a line below to enable/disable a modulation.
+#define RTTY_ENABLED 1
+#define MFSK_ENABLED 1
+
+// TX Power
+#define TX_POWER  5 // PWR 0...7 0- MIN ... 7 - MAX
+// 0 --> -1dBm
+// 1 --> 2dBm
+// 2 --> 5dBm
+// 3 --> 8dBm
+// 4 --> 11dBm
+// 5 --> 14dBm - DEFAULT
+// 6 --> 17dBm
+// 7 --> 20dBm
+
+// Delay *between* transmitted packets
+#define TX_DELAY  1000
+
+//*************RTTY SETTINGS******************
+#define CALLSIGN "N0CALL" // put your RTTY callsign here, max. 15 characters
+#define RTTY_DEVIATION 0x3	// RTTY shift = RTTY_DEVIATION x 270Hz
+#define RTTY_7BIT   1 // if 0 --> 5 bits
+#define RTTY_USE_2_STOP_BITS   1
+
+
+//************MFSK Binary Settings************
+#define BINARY_PAYLOAD_ID 0x01 // Payload ID for use in Binary Packets
+
+
+//***********Other Settings ******************
+// Switch sonde ON/OFF via Button
+// If this is a flight you might prevent sonde from powered off by button
+#define ALLOW_DISABLE_BY_BUTTON 0
+
+
+
+//************* APRS Settings *************************
+// Note - APRS functionality currently disabled, and will eventually be removed.
+//
 #define APRS_CALLSIGN "NOCALL" // put your APRS callsign here, 6 characters. If your callsign is shorter add spaces
 #define APRS_SSID 'B' // put your APRS SSID here
 // 0 --> Your primary station usually fixed and message capable
@@ -34,42 +73,8 @@
 // F --> generic additional station, digi, mobile, wx, etc.
 
 #define APRS_COMMENT " Hello from the sky!"
-#define RTTY_COMMENT " Hello from the sky!"				// max. 25 characters - Currently un-used.
-
-//*************TX Frequencies********************
-#define RTTY_FREQUENCY  434.650f //Mhz middle frequency
 #define APRS_FREQUENCY  439.100f //Mhz middle frequency - Australian 70cm APRS Frequency
 
-//************RTTY Shift*********************** si4032
-#define RTTY_DEVIATION 0x3	// RTTY shift = RTTY_DEVIATION x 270Hz
-
-//************RTTY Speed*********************** si4032
-#define RTTY_SPEED  100 // RTTY baudrate
-
-//************rtty bits************************ si4032
-#define RTTY_7BIT   1 // if 0 --> 5 bits
-
-//************rtty stop bits******************* si4032
-#define RTTY_USE_2_STOP_BITS   0
-
-//********* power definition**************************
-#define TX_POWER  5 // PWR 0...7 0- MIN ... 7 - MAX
-// 0 --> -1dBm
-// 1 --> 2dBm
-// 2 --> 5dBm
-// 3 --> 8dBm
-// 4 --> 11dBm
-// 5 --> 14dBm - DEFAULT
-// 6 --> 17dBm
-// 7 --> 20dBm
-//****************************************************
-
-// Switch sonde ON/OFF via Button
-// If this is a flight you might prevent sonde from powered off by button
-#define ALLOW_DISABLE_BY_BUTTON 0
-
-//********** Frame Delay in msec**********************
-#define TX_DELAY  1000
 #endif
 
 #endif //RS41HUP_CONFIG_H

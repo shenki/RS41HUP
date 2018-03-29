@@ -70,7 +70,9 @@ volatile uint8_t disable_armed = 0;
 
 
 // Binary Packet Format
-#pragma pack(push,1)
+// Note that we need to pack this to 1-byte alignment, hence the #pragma flags below
+// Refer: https://gcc.gnu.org/onlinedocs/gcc-4.4.4/gcc/Structure_002dPacking-Pragmas.html
+#pragma pack(push,1) 
 struct TBinaryPacket
 {
 uint8_t   PayloadID;
@@ -86,7 +88,7 @@ uint8_t   Sats;
 int8_t   Temp; // Twos Complement Temp value.
 uint8_t   BattVoltage; // 0 = 0v, 255 = 5.0V, linear steps in-between.
 uint16_t Checksum; // CRC16-CCITT Checksum.
-};  //  __attribute__ ((packed));
+};  //  __attribute__ ((packed)); // Doesn't work?
 #pragma pack(pop)
 
 
@@ -122,7 +124,7 @@ void TIM2_IRQHandler(void) {
     if (ALLOW_DISABLE_BY_BUTTON){
       if (ADCVal[1] > adc_bottom){
         button_pressed++;
-        if (button_pressed > (RTTY_SPEED / 3)){
+        if (button_pressed > (BAUD_RATE / 3)){
           disable_armed = 1;
           GPIO_SetBits(GPIOB, RED);
           //GPIO_SetBits(GPIOB, GREEN);
@@ -150,7 +152,7 @@ void TIM2_IRQHandler(void) {
             if (*(++tx_buffer) == 0) {
               tx_on = 0;
               // Reset the TX Delay counter, which is decremented at the symbol rate.
-              tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+              tx_on_delay = TX_DELAY / (1000/BAUD_RATE);
               tx_enable = 0;
               //radio_disable_tx(); // Don't turn off the transmitter!
             }
@@ -175,7 +177,7 @@ void TIM2_IRQHandler(void) {
               current_mfsk_byte = 0;
               tx_on = 0;
               // Reset the TX Delay counter, which is decremented at the symbol rate.
-              tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+              tx_on_delay = TX_DELAY / (1000/BAUD_RATE);
               tx_enable = 0;
               
           } else {
@@ -202,7 +204,7 @@ void TIM2_IRQHandler(void) {
               current_mfsk_byte = 0;
               tx_on = 0;
               // Reset the TX Delay counter, which is decremented at the symbol rate.
-              tx_on_delay = TX_DELAY / (1000/RTTY_SPEED);
+              tx_on_delay = TX_DELAY / (1000/BAUD_RATE);
               tx_enable = 0;
               
           } else {
@@ -255,7 +257,7 @@ int main(void) {
   NVIC_Conf();
   init_port();
 
-  init_timer(RTTY_SPEED);
+  init_timer(BAUD_RATE);
 
   delay_init();
   ublox_init();
@@ -267,7 +269,7 @@ int main(void) {
 
   radio_soft_reset();
   // setting RTTY TX frequency
-  radio_set_tx_frequency(RTTY_FREQUENCY);
+  radio_set_tx_frequency(TRANSMIT_FREQUENCY);
 
   // setting TX power
   radio_rw_register(0x6D, 00 | (TX_POWER & 0x0007), 1);
@@ -289,9 +291,9 @@ int main(void) {
 
   // Why do we have to do this again?
   spi_init();
-  radio_set_tx_frequency(RTTY_FREQUENCY);   
+  radio_set_tx_frequency(TRANSMIT_FREQUENCY);   
   radio_rw_register(0x71, 0x00, 1);
-  init_timer(RTTY_SPEED);
+  init_timer(BAUD_RATE);
 
   radio_enable_tx();
 
@@ -305,11 +307,17 @@ int main(void) {
 
           // Now Startup a RTTY Transmission
           current_mode = RTTY;
-          send_rtty_packet();
+          // If enabled, transmit a RTTY packet.
+          #ifdef RTTY_ENABLED
+            send_rtty_packet();
+          #endif
+
         } else if (current_mode == RTTY){
           // We've just transmitted a RTTY packet, now configure for 4FSK.
           current_mode = FSK_4;
-          send_mfsk_packet();
+          #ifdef MFSK_ENABLED
+            send_mfsk_packet();
+          #endif
         } else {
           // We've finished the 4FSK transmission, grab new data.
           current_mode = STARTUP;
@@ -403,7 +411,7 @@ void send_mfsk_packet(){
 
   // Assemble a binary packet
   struct TBinaryPacket BinaryPacket;
-  BinaryPacket.PayloadID = 0x01;
+  BinaryPacket.PayloadID = BINARY_PAYLOAD_ID;
   BinaryPacket.Counter = send_count;
   BinaryPacket.Hours = gpsData.hours;
   BinaryPacket.Minutes = gpsData.minutes;
