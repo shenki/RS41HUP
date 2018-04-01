@@ -365,17 +365,19 @@ void send_rtty_packet() {
   uint32_t lat_fl = (uint32_t) abs(abs(gpsData.lat_raw) - lat_d * 10000000) / 1000;
   uint8_t lon_d = (uint8_t) abs(gpsData.lon_raw / 10000000);
   uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
+
+  uint8_t speed_kph = (uint8_t)((float)gpsData.speed_raw*0.0036);
  
   // Produce a RTTY Sentence (Compatible with the existing HORUS RTTY payloads)
   
-  sprintf(buf_rtty, "$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%ld,%d,%d,%d",
+  sprintf(buf_rtty, "$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%d,%d,%d,%d",
         callsign,
         send_count,
         gpsData.hours, gpsData.minutes, gpsData.seconds,
         gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
         gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
         (gpsData.alt_raw / 1000),
-        gpsData.speed_raw,
+        speed_kph,
         gpsData.sats_raw,
         voltage*10,
         si4032_temperature
@@ -419,7 +421,7 @@ void send_mfsk_packet(){
   BinaryPacket.Latitude = float_lat;
   BinaryPacket.Longitude = float_lon;
   BinaryPacket.Altitude = (uint16_t)(gpsData.alt_raw/1000);
-  BinaryPacket.Speed = (uint8_t)gpsData.speed_raw;
+  BinaryPacket.Speed = (uint8_t)((float)gpsData.speed_raw*0.0036);
   BinaryPacket.BattVoltage = volts_scaled;
   BinaryPacket.Sats = gpsData.sats_raw;
   BinaryPacket.Temp = si4032_temperature;
