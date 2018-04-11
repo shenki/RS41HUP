@@ -35,7 +35,8 @@ https://launchpad.net/gcc-arm-embedded/5.0/5-2016-q3-update/+download/gcc-arm-no
 # Programming
 Either:
 * Use the ST Micro ST-LINK utility (windows only it seems?), or
-* [stlink](https://github.com/texane/stlink) under Linux/OSX (though I haven't had much success with this yet...)
+* [stlink](https://github.com/texane/stlink) under Linux/OSX (though I haven't had much success with this yet...), or
+# Use `flash.sh` with a [Black Magic Probe](https://1bitsquared.com/products/black-magic-probe). You will need to modify the path to the debugger's serial interface.
 
 Refer to [this file](./docs/programming_header.md) for programming header pinouts.
 
