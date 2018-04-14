@@ -54,7 +54,7 @@
 //************* APRS Settings *************************
 // Note - APRS functionality currently disabled, and will eventually be removed.
 //
-#define APRS_CALLSIGN "NOCALL" // put your APRS callsign here, 6 characters. If your callsign is shorter add spaces
+#define APRS_CALLSIGN "N0CALL" // put your APRS callsign here, 6 characters. If your callsign is shorter add spaces
 #define APRS_SSID 'B' // put your APRS SSID here
 // 0 --> Your primary station usually fixed and message capable
 // 1 --> generic additional station, digi, mobile, wx, etc.
