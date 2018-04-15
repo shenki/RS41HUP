@@ -20,15 +20,17 @@
 
 // TX Power
 #define TX_POWER  5 // PWR 0...7 0- MIN ... 7 - MAX
-// TODO: Check the below levels are correct. Apparnetly 7 - 50mW at 434 MHz.
-// 0 --> -1dBm
-// 1 --> 2dBm
-// 2 --> 5dBm
-// 3 --> 8dBm
-// 4 --> 11dBm
-// 5 --> 14dBm - DEFAULT
-// 6 --> 17dBm
-// 7 --> 20dBm
+// Power Levels measured at 434.650 MHz, using a Rigol DSA815, and a 10 kHz RBW
+// Power measured by connecting a short (30cm) length of RG316 directly to the
+// antenna/ground pads at the bottom of the RS41 PCB.
+// 0 --> -1.9dBm
+// 1 --> 1.3dBm
+// 2 --> 3.6dBm
+// 3 --> 7.0dBm
+// 4 --> 10.0dBm
+// 5 --> 13.1dBm - DEFAULT
+// 6 --> 15.0dBm
+// 7 --> 16.3dBm
 
 // Delay *between* transmitted packets
 #define TX_DELAY  1000
