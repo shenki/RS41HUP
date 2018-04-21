@@ -173,7 +173,7 @@ void TIM2_IRQHandler(void) {
           // Reached the end of the current character, increment the current-byte pointer.
           if (current_mfsk_byte++ == packet_length) {
               // End of the packet. Reset Counters and stop modulation.
-              radio_rw_register(0x73, 0x00, 1); // Idle at Symbol 0.
+              radio_rw_register(0x73, 0x03, 1); // Idle at Symbol 3
               current_mfsk_byte = 0;
               tx_on = 0;
               // Reset the TX Delay counter, which is decremented at the symbol rate.
@@ -370,7 +370,7 @@ void send_rtty_packet() {
  
   // Produce a RTTY Sentence (Compatible with the existing HORUS RTTY payloads)
   
-  sprintf(buf_rtty, "$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%d,%d,%d,%d",
+  sprintf(buf_rtty, "\n\n\n\n$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04ld,%s%d.%04ld,%ld,%d,%d,%d,%d",
         callsign,
         send_count,
         gpsData.hours, gpsData.minutes, gpsData.seconds,
@@ -384,7 +384,7 @@ void send_rtty_packet() {
         );
   
   // Calculate and append CRC16 checksum to end of sentence.
-  CRC_rtty = string_CRC16_checksum(buf_rtty + 5);
+  CRC_rtty = string_CRC16_checksum(buf_rtty + 9);
   sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
 
   // Point the TX buffer at the temporary RTTY packet buffer.
