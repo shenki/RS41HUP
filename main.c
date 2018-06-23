@@ -118,6 +118,8 @@ void USART1_IRQHandler(void) {
 //
 
 void TIM2_IRQHandler(void) {
+  static int mfsk_symbol = 0;
+
   if (TIM_GetITStatus(TIM2, TIM_IT_Update) != RESET) {
     TIM_ClearITPendingBit(TIM2, TIM_IT_Update);
 
@@ -166,8 +168,8 @@ void TIM2_IRQHandler(void) {
         }
       } else if (current_mode == FSK_4) {
         // 4FSK Symbol Selection Logic
-        // Get Symbol to transmit.
-        int mfsk_symbol = send_mfsk(tx_buffer[current_mfsk_byte]);
+        // Get Symbol to transmit.  
+        mfsk_symbol = send_mfsk(tx_buffer[current_mfsk_byte]);
 
         if(mfsk_symbol == -1){
           // Reached the end of the current character, increment the current-byte pointer.
@@ -194,7 +196,7 @@ void TIM2_IRQHandler(void) {
       } else if (current_mode == FSK_2) {
         // 2FSK Symbol Selection Logic
         // Get Symbol to transmit.
-        int mfsk_symbol = send_2fsk(tx_buffer[current_mfsk_byte]);
+        mfsk_symbol = send_2fsk(tx_buffer[current_mfsk_byte]);
 
         if(mfsk_symbol == -1){
           // Reached the end of the current character, increment the current-byte pointer.
@@ -219,6 +221,16 @@ void TIM2_IRQHandler(void) {
       } else{
         // Ummmm. 
       }
+    }else{
+      // TX is off 
+      // If we are don't have RTTY enabled, and if we have MFSK_CONTINUOUS set,
+      // transmit continuous MFSK symbols.
+      #ifndef RTTY_ENABLED
+        #ifdef MFSK_CONTINUOUS
+          mfsk_symbol = (mfsk_symbol+1)%4;
+          radio_rw_register(0x73, (uint8_t)mfsk_symbol, 1);
+        #endif
+      #endif
     }
 
     // Delay between Transmissions Logic.
@@ -374,8 +386,8 @@ void send_rtty_packet() {
         callsign,
         send_count,
         gpsData.hours, gpsData.minutes, gpsData.seconds,
-        gpsData.lat_raw < 0 ? "-" : "", lat_d, lat_fl,
-        gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
+        gpsData.lat_raw < 0 ? "S" : "N", lat_d, lat_fl,
+        gpsData.lon_raw < 0 ? "W" : "E", lon_d, lon_fl,
         (gpsData.alt_raw / 1000),
         speed_kph,
         gpsData.sats_raw,

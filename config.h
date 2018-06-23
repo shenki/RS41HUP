@@ -11,7 +11,7 @@
 
 
 //************GLOBAL Settings*****************
-#define TRANSMIT_FREQUENCY  434.650f //Mhz middle frequency
+#define TRANSMIT_FREQUENCY  434.640f //Mhz middle frequency
 #define BAUD_RATE  100 // RTTY & MFSK Baud rate
 
 // Modulation Settings - Comment out a line below to enable/disable a modulation.
@@ -44,6 +44,9 @@
 
 //************MFSK Binary Settings************
 #define BINARY_PAYLOAD_ID 0x01 // Payload ID for use in Binary Packets
+// If enabled, transmit incrementing tones in the 'idle' period between packets.
+// This will only function if ONLY MFSK is enabled.
+#define MFSK_CONTINUOUS 1
 
 
 //***********Other Settings ******************
