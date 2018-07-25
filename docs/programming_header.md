@@ -27,7 +27,7 @@ Suitable Plug: Molex 87568-1073  (element14 order code 1365756)
 
 
 ## STLink-v2 Header to Vaisala Cable
-
+```
 RS41			STLink 
 ----------------------
 1				4
@@ -40,5 +40,5 @@ RS41			STLink
 8				9
 9				7
 10		N/C
-
-All other pins Not connected
+```
+All other pins on STLink header not connected.
