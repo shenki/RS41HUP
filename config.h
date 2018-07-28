@@ -15,7 +15,7 @@
 #define BAUD_RATE  100 // RTTY & MFSK Baud rate
 
 // Modulation Settings - Comment out a line below to enable/disable a modulation.
-#define RTTY_ENABLED 1
+//#define RTTY_ENABLED 1
 #define MFSK_ENABLED 1
 
 // TX Power
@@ -43,7 +43,12 @@
 
 
 //************MFSK Binary Settings************
-#define BINARY_PAYLOAD_ID 0x01 // Payload ID for use in Binary Packets
+// Binary Payload ID (0 though 255) - For your own flights, you will need to choose a payload ID,
+// and set this value to that. 
+// Refer to the payload ID list here: https://github.com/projecthorus/horusbinary/blob/master/payload_id_list.txt
+#define BINARY_PAYLOAD_ID 0 // Payload ID for use in Binary packets
+
+
 // If enabled, transmit incrementing tones in the 'idle' period between packets.
 // This will only function if ONLY MFSK is enabled.
 #define MFSK_CONTINUOUS 1

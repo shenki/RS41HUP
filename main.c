@@ -425,7 +425,7 @@ void send_mfsk_packet(){
 
   // Assemble a binary packet
   struct TBinaryPacket BinaryPacket;
-  BinaryPacket.PayloadID = BINARY_PAYLOAD_ID;
+  BinaryPacket.PayloadID = BINARY_PAYLOAD_ID%256;
   BinaryPacket.Counter = send_count;
   BinaryPacket.Hours = gpsData.hours;
   BinaryPacket.Minutes = gpsData.minutes;
