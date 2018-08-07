@@ -9,8 +9,10 @@ Original Repository: https://github.com/Qyon/STM32_RTTY, though this fork is bas
 
 Modifications by Mark Jessop <vk5qi@rfhead.net> include:
 * Compatability with existing Project Horus RTTY Formats.
-* Support for 4FSK and 2FSK binary telemetry (to be decoded by a future codec2-dev application)
 * Removed APRS support - no 70cm APRS infrastructure in Australia, so not really useful to us.
+* Support for 4FSK and 2FSK binary telemetry
+  * A decoder for the 4FSK mode is available here: https://github.com/projecthorus/horusbinary
+  * Information on the 4FSK mode's performance is available here: https://www.rowetel.com/?p=5906
 
 
 # Compilation
