@@ -19,7 +19,7 @@
 #define MFSK_ENABLED 1
 
 // TX Power
-#define TX_POWER  5 // PWR 0...7 0- MIN ... 7 - MAX
+#define TX_POWER  7 // PWR 0...7 0- MIN ... 7 - MAX
 // Power Levels measured at 434.650 MHz, using a Rigol DSA815, and a 10 kHz RBW
 // Power measured by connecting a short (30cm) length of RG316 directly to the
 // antenna/ground pads at the bottom of the RS41 PCB.
@@ -31,6 +31,9 @@
 // 5 --> 13.1dBm - DEFAULT
 // 6 --> 15.0dBm
 // 7 --> 16.3dBm
+// WARNING: RS41s have been observed to lose transmitter PLL lock when running at 25mW, even with
+// stock insulation. This results in the transmitted signal drifting up the 70cm band with temperature.
+// To minimise the risk of this, the RS41 should be run at full transmit power (7 = ~50mW)
 
 // Delay *between* transmitted packets
 #define TX_DELAY  1000

@@ -85,7 +85,7 @@ float   Longitude;
 uint16_t    Altitude;
 uint8_t   Speed; // Speed in Knots (1-255 knots)
 uint8_t   Sats;
-int8_t   Temp; // Twos Complement Temp value.
+int8_t   Temp; // Si4032 temperature, as a signed value (-128 to +128, though sensor limited to -64 to +64 deg C)
 uint8_t   BattVoltage; // 0 = 0v, 255 = 5.0V, linear steps in-between.
 uint16_t Checksum; // CRC16-CCITT Checksum.
 };  //  __attribute__ ((packed)); // Doesn't work?
@@ -290,10 +290,10 @@ int main(void) {
   radio_rw_register(0x71, 0x00, 1);
 
   // Temperature Value Offset
-  radio_rw_register(0x13, 0xF0, 1);
+  radio_rw_register(0x13, 0x00, 1); // Was 0xF0 (?)
 
   // Temperature Sensor Calibration
-  radio_rw_register(0x12, 0x00, 1);
+  radio_rw_register(0x12, 0x20, 1);
 
   // ADC configuration
   radio_rw_register(0x0f, 0x80, 1);
