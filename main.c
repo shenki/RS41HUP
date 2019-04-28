@@ -328,11 +328,13 @@ int main(void) {
           // We've just transmitted a RTTY packet, now configure for 4FSK.
           current_mode = FSK_4;
           #ifdef MFSK_ENABLED
+            radio_enable_tx();
             send_mfsk_packet();
           #endif
         } else {
           // We've finished the 4FSK transmission, grab new data.
           current_mode = STARTUP;
+          radio_disable_tx();
         }
     } else {
       NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);

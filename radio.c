@@ -40,7 +40,7 @@ void radio_soft_reset() {
 }
 
 void radio_enable_tx() {
-  radio_rw_register(0x07, 0x48, 1);
+  radio_rw_register(0x07, 0x4B, 1); // was 0x48 ???
 }
 
 int8_t radio_read_temperature() {
