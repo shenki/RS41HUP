@@ -1,7 +1,31 @@
 #include <stdio.h>
 #include "mfsk.h"
 
-int send_mfsk(char current_char) {
+int send_16fsk(char current_char) {
+	// Step through a byte, and return 4FSK symbols.
+	static uint8_t nr_nibble = 0;
+	// Local copy of the character.
+	char _c = current_char;
+
+	if (nr_nibble == 2){
+		// Reached the end of the byte.
+		nr_nibble = 0;
+		// Return -1 to indicate we have finished with this byte.
+		return -1;
+	} else {
+		// Shift it left to the nibble we are up to.
+		for (int _i=0;_i<nr_nibble;_i++){
+			_c = _c << 4;
+		}
+		// Get the current symbol (the 2-bits we need).
+		uint8_t symbol = ((uint8_t)_c & 0xF0) >> 4;
+
+		nr_nibble++;
+		return (int)symbol;
+	}
+}
+
+int send_4fsk(char current_char) {
 	// Step through a byte, and return 4FSK symbols.
 	static uint8_t nr_nibble = 0;
 	// Local copy of the character.

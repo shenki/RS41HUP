@@ -35,7 +35,7 @@
 // Transmit Modulation Switching
 #define STARTUP 0
 #define RTTY 1
-#define FSK_4 2
+#define MFSK 2
 #define FSK_2 3
 volatile int current_mode = STARTUP;
 
@@ -156,7 +156,11 @@ void TIM2_IRQHandler(void) {
               // Reset the TX Delay counter, which is decremented at the symbol rate.
               tx_on_delay = TX_DELAY / (1000/BAUD_RATE);
               tx_enable = 0;
-              //radio_disable_tx(); // Don't turn off the transmitter!
+              
+              // If we're not in continuous mode, disable the transmitter now.
+              #ifndef CONTINUOUS_MODE
+                radio_disable_tx();
+              #endif
             }
           } else if (send_rtty_status == rttyOne) {
             radio_rw_register(0x73, RTTY_DEVIATION, 1);
@@ -166,10 +170,14 @@ void TIM2_IRQHandler(void) {
             if (led_enabled) GPIO_ResetBits(GPIOB, RED);
           }
         }
-      } else if (current_mode == FSK_4) {
+      } else if (current_mode == MFSK) {
         // 4FSK Symbol Selection Logic
-        // Get Symbol to transmit.  
-        mfsk_symbol = send_mfsk(tx_buffer[current_mfsk_byte]);
+        // Get Symbol to transmit.
+        #ifdef MFSK_4_ENABLED
+          mfsk_symbol = send_4fsk(tx_buffer[current_mfsk_byte]);
+        #elif MFSK_16_ENABLED
+          mfsk_symbol = send_16fsk(tx_buffer[current_mfsk_byte]);
+        #endif
 
         if(mfsk_symbol == -1){
           // Reached the end of the current character, increment the current-byte pointer.
@@ -181,10 +189,19 @@ void TIM2_IRQHandler(void) {
               // Reset the TX Delay counter, which is decremented at the symbol rate.
               tx_on_delay = TX_DELAY / (1000/BAUD_RATE);
               tx_enable = 0;
+
+              // If we're not in continuous mode, disable the transmitter now.
+              #ifndef CONTINUOUS_MODE
+                radio_disable_tx();
+              #endif
               
           } else {
             // We've now advanced to the next byte, grab the first symbol from it.
-            mfsk_symbol = send_mfsk(tx_buffer[current_mfsk_byte]);
+            #ifdef MFSK_4_ENABLED
+              mfsk_symbol = send_4fsk(tx_buffer[current_mfsk_byte]);
+            #elif MFSK_16_ENABLED
+              mfsk_symbol = send_16fsk(tx_buffer[current_mfsk_byte]);
+            #endif
           }
         }
         // Set the symbol!
@@ -223,11 +240,15 @@ void TIM2_IRQHandler(void) {
       }
     }else{
       // TX is off 
-      // If we are don't have RTTY enabled, and if we have MFSK_CONTINUOUS set,
+      // If we are don't have RTTY enabled, and if we have CONTINUOUS_MODE set,
       // transmit continuous MFSK symbols.
       #ifndef RTTY_ENABLED
-        #ifdef MFSK_CONTINUOUS
-          mfsk_symbol = (mfsk_symbol+1)%4;
+        #ifdef CONTINUOUS_MODE
+          #ifdef MFSK_4_ENABLED
+            mfsk_symbol = (mfsk_symbol+1)%4;
+          #elif MFSK_16_ENABLED
+            mfsk_symbol = (mfsk_symbol+1)%16;
+          #endif
           radio_rw_register(0x73, (uint8_t)mfsk_symbol, 1);
         #endif
       #endif
@@ -307,6 +328,13 @@ int main(void) {
   radio_rw_register(0x71, 0x00, 1);
   init_timer(BAUD_RATE);
 
+
+
+  // WARNING WARNING WARNING
+  // As per the Si4032 datasheet, the synthesizer's VCO is only calibrated when it is enabled,
+  // not continuously throughout transmissions. If it is enabled, and there is a significant temperature change,
+  // the transmitter *will* drift off frequency.
+  // The fix appears to be to briefly disable, then re-enable the transmitter, which forces a re-calibration.
   radio_enable_tx();
 
 
@@ -326,8 +354,8 @@ int main(void) {
 
         } else if (current_mode == RTTY){
           // We've just transmitted a RTTY packet, now configure for 4FSK.
-          current_mode = FSK_4;
-          #ifdef MFSK_ENABLED
+          current_mode = MFSK;
+          #if defined(MFSK_4_ENABLED) || defined(MFSK_16_ENABLED)
             radio_enable_tx();
             send_mfsk_packet();
           #endif
@@ -461,15 +489,23 @@ void send_mfsk_packet(){
     NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
     __WFI();
   }
-  current_mode = FSK_4;
+  current_mode = MFSK;
   #endif
 
 
-  // Write Preamble characters into mfsk buffer.
-  sprintf(buf_mfsk, "\x1b\x1b\x1b\x1b");
-  // Encode the packet, and write into the mfsk buffer.
-  int coded_len = horus_l2_encode_tx_packet((unsigned char*)buf_mfsk+4,(unsigned char*)&BinaryPacket,sizeof(BinaryPacket));
-
+  
+  #ifdef CONTINUOUS_MODE
+    // Write Preamble characters into mfsk buffer.
+    sprintf(buf_mfsk, "\x1b\x1b\x1b\x1b");
+    // Encode the packet, and write into the mfsk buffer.
+    int coded_len = horus_l2_encode_tx_packet((unsigned char*)buf_mfsk+4,(unsigned char*)&BinaryPacket,sizeof(BinaryPacket));
+  #else
+    // Double length preamble to help the decoder lock-on after a quiet period.
+    // Write Preamble characters into mfsk buffer.
+    sprintf(buf_mfsk, "\x1b\x1b\x1b\x1b\x1b\x1b\x1b\x1b");
+    // Encode the packet, and write into the mfsk buffer.
+    int coded_len = horus_l2_encode_tx_packet((unsigned char*)buf_mfsk+8,(unsigned char*)&BinaryPacket,sizeof(BinaryPacket));
+  #endif
 
   #ifdef MFSKDEBUG
   // Write the coded packet into the RTTY transmit buffer as hex
@@ -489,7 +525,7 @@ void send_mfsk_packet(){
     NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
     __WFI();
   }
-  current_mode = FSK_4;
+  current_mode = MFSK;
   // Wait until tx_enable
   while(tx_enable == 0){
     NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
@@ -498,8 +534,13 @@ void send_mfsk_packet(){
   _delay_ms(1000);
   #endif
 
-  // Data to transmit is the coded packet length, plus the 4-byte preamble.
-  packet_length = coded_len+4;
+  // Data to transmit is the coded packet length, plus the preamble.
+  #ifdef CONTINUOUS_MODE
+    packet_length = coded_len+4;
+  #else
+    packet_length = coded_len+8;
+  #endif
+
   tx_buffer = buf_mfsk;
 
   // Enable the radio, and set the tx_on flag to 1.

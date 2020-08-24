@@ -1,5 +1,6 @@
 //
 // Created by SQ5RWU on 2016-12-24.
+// Modified by VK5QI in 2018-ish
 //
 
 #ifndef RS41HUP_CONFIG_H
@@ -11,15 +12,16 @@
 
 
 //************GLOBAL Settings*****************
-#define TRANSMIT_FREQUENCY  434.640f //Mhz middle frequency
-#define BAUD_RATE  100 // RTTY & MFSK Baud rate
+#define TRANSMIT_FREQUENCY  434.660f //Mhz middle frequency
+#define BAUD_RATE  100 // RTTY & MFSK Baud rate.
+                       // NOTE: Currently supported MFSK baud rates with horus-gui are 50 and 100 baud.
 
 // Modulation Settings - Comment out a line below to enable/disable a modulation.
 //#define RTTY_ENABLED 1
-#define MFSK_ENABLED 1
+#define MFSK_4_ENABLED 1
 
 // TX Power
-#define TX_POWER  7 // PWR 0...7 0- MIN ... 7 - MAX
+#define TX_POWER  5 // PWR 0...7 0- MIN ... 7 - MAX
 // Power Levels measured at 434.650 MHz, using a Rigol DSA815, and a 10 kHz RBW
 // Power measured by connecting a short (30cm) length of RG316 directly to the
 // antenna/ground pads at the bottom of the RS41 PCB.
@@ -31,11 +33,10 @@
 // 5 --> 13.1dBm - DEFAULT
 // 6 --> 15.0dBm
 // 7 --> 16.3dBm
-// WARNING: RS41s have been observed to lose transmitter PLL lock when running at 25mW, even with
-// stock insulation. This results in the transmitted signal drifting up the 70cm band with temperature.
-// To minimise the risk of this, the RS41 should be run at full transmit power (7 = ~50mW)
 
 // Delay *between* transmitted packets
+// If you only have MFSK_4 enabled, and MFSK_CONTINUOUS (below) is disabled,
+// Then the transmitter will turn off between transmissions. This saves about 50mA of power consumption.
 #define TX_DELAY  1000
 
 //*************RTTY SETTINGS******************
@@ -48,13 +49,14 @@
 //************MFSK Binary Settings************
 // Binary Payload ID (0 though 255) - For your own flights, you will need to choose a payload ID,
 // and set this value to that. 
-// Refer to the payload ID list here: https://github.com/projecthorus/horusbinary/blob/master/payload_id_list.txt
+// Refer to the payload ID list here: https://github.com/projecthorus/horusdemodlib/blob/master/payload_id_list.txt
 #define BINARY_PAYLOAD_ID 0 // Payload ID for use in Binary packets
 
 
 // If enabled, transmit incrementing tones in the 'idle' period between packets.
 // This will only function if ONLY MFSK is enabled.
-#define MFSK_CONTINUOUS 1
+// Note, you need to COMMENT this line out, not just set it to 0
+#define CONTINUOUS_MODE 1
 
 
 //***********Other Settings ******************
