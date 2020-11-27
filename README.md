@@ -1,7 +1,7 @@
 # RS41HUP (Ham Use Project) - Project Horus Fork
 Firmware for RS41 for HAM use.
 
-It is possible to recycle RS41-SGP sondes for amateur radio use without any electrical changes! You just have to build a new firmware (this one) and apply it via a cheap programmer, the "ST-Linkv2" (or alternatives). The modified sonde can now transmit on a user-defined frequency in the 70cm band, with Habhub-compatible RTTY telemetry!
+It is possible to recycle RS41-SGP sondes for amateur radio use without any electrical changes! You just have to build a new firmware (this one) and apply it via a cheap programmer, the "ST-Linkv2" (or alternatives). The modified sonde can now transmit on a user-defined frequency in the 70cm band, with Habhub-compatible RTTY and (better performing) 4FSK telemetry!
 
 Released under GPL v2.
 
@@ -10,8 +10,8 @@ Original Repository: https://github.com/Qyon/STM32_RTTY, though this fork is bas
 Modifications by Mark Jessop <vk5qi@rfhead.net> include:
 * Compatability with existing Project Horus RTTY Formats.
 * Removed APRS support - no 70cm APRS infrastructure in Australia, so not really useful to us.
-* Support for 4FSK and 2FSK binary telemetry
-  * A decoder for the 4FSK mode is available here: https://github.com/projecthorus/horusbinary
+* Addition of the 4FSK 'Horus Binary' high performance telemetry mode
+  * A decoder for the 4FSK mode is available here: https://github.com/projecthorus/horusdemodlib
   * Information on the 4FSK mode's performance is available here: https://www.rowetel.com/?p=5906
 
 
