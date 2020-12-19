@@ -98,21 +98,89 @@ void ublox_init(){
   uBloxPacket msgcfgmsg = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x01, .payloadSize=sizeof(uBloxCFGMSGPayload)},
     .data.cfgmsg = {.msgClass=0x01, .msgID=0x02, .rate=1}};
 
+  // Configure to send NAV-POSLLH Messages at 1Hz
   do {
     send_ublox_packet(&msgcfgmsg);
   } while (!ublox_wait_for_ack());
 
+  // Configure to send NAV-SOL Messages at 1Hz
   msgcfgmsg.data.cfgmsg.msgID = 0x6;
   do {
     send_ublox_packet(&msgcfgmsg);
   } while (!ublox_wait_for_ack());
 
+  // Configure to send NAV-TIMEUTC Messages at 1Hz
   msgcfgmsg.data.cfgmsg.msgID = 0x21;
   do {
     send_ublox_packet(&msgcfgmsg);
   } while (!ublox_wait_for_ack());
 
-  // Flight mode - needed above 18km altitude
+  // Configure to send NAV-VELNED Messages at 1Hz
+  msgcfgmsg.data.cfgmsg.msgID = 0x12;
+  do {
+    send_ublox_packet(&msgcfgmsg);
+  } while (!ublox_wait_for_ack());
+
+  // Configure flight mode - needed above 18km altitude
+  uBloxPacket msgcfgnav5 = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x24, .payloadSize=sizeof(uBloxCFGNAV5Payload)},
+    .data.cfgnav5={.mask=0b00000001111111111, .dynModel=7, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=25, .tDop=25,
+                   .pAcc=100, .tAcc=300, .staticHoldThresh=0, .dgpsTimeOut=2, .reserved2=0, .reserved3=0, .reserved4=0}};
+  do {
+    send_ublox_packet(&msgcfgnav5);
+  } while (!ublox_wait_for_ack());
+
+  #ifdef UBLOX_POWERSAVE
+    ubx_powersave();
+  #endif
+
+}
+
+void ublox_gps_stop(){
+  // Set the GPS into a halted mode.
+    uBloxPacket msgcfgrst = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x04, .payloadSize=sizeof(uBloxCFGRSTPayload)},
+      .data.cfgrst = { .navBbrMask=0x0000, .resetMode=8, .reserved1 = 0}
+  };
+  do {
+    send_ublox_packet(&msgcfgrst);
+  } while (!ublox_wait_for_ack());
+}
+
+void ublox_gps_start(){
+  // Bring the GPS out of the halted mode.
+    uBloxPacket msgcfgrst = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x04, .payloadSize=sizeof(uBloxCFGRSTPayload)},
+      .data.cfgrst = { .navBbrMask=0x0000, .resetMode=2, .reserved1 = 0}
+  };
+  do {
+    send_ublox_packet(&msgcfgrst);
+  } while (!ublox_wait_for_ack());
+
+  uBloxPacket msgcfgmsg = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x01, .payloadSize=sizeof(uBloxCFGMSGPayload)},
+    .data.cfgmsg = {.msgClass=0x01, .msgID=0x02, .rate=1}};
+
+  // Configure to send NAV-POSLLH Messages at 1Hz
+  do {
+    send_ublox_packet(&msgcfgmsg);
+  } while (!ublox_wait_for_ack());
+
+  // Configure to send NAV-SOL Messages at 1Hz
+  msgcfgmsg.data.cfgmsg.msgID = 0x6;
+  do {
+    send_ublox_packet(&msgcfgmsg);
+  } while (!ublox_wait_for_ack());
+
+  // Configure to send NAV-TIMEUTC Messages at 1Hz
+  msgcfgmsg.data.cfgmsg.msgID = 0x21;
+  do {
+    send_ublox_packet(&msgcfgmsg);
+  } while (!ublox_wait_for_ack());
+
+  // Configure to send NAV-VELNED Messages at 1Hz
+  msgcfgmsg.data.cfgmsg.msgID = 0x12;
+  do {
+    send_ublox_packet(&msgcfgmsg);
+  } while (!ublox_wait_for_ack());
+
+  // Configure flight mode - needed above 18km altitude
   uBloxPacket msgcfgnav5 = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x24, .payloadSize=sizeof(uBloxCFGNAV5Payload)},
     .data.cfgnav5={.mask=0b00000001111111111, .dynModel=7, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=25, .tDop=25,
                    .pAcc=100, .tAcc=300, .staticHoldThresh=0, .dgpsTimeOut=2, .reserved2=0, .reserved3=0, .reserved4=0}};
@@ -162,6 +230,7 @@ void ublox_handle_packet(uBloxPacket *pkt) {
   } else {
 
     if (pkt->header.messageClass == 0x01 && pkt->header.messageId == 0x07){
+      // NAV-PVT (not supported by uBlox 6?)
       currentGPSData.ok_packets += 1;
       currentGPSData.fix = pkt->data.navpvt.fixType;
       currentGPSData.lat_raw = pkt->data.navpvt.lat;
@@ -171,20 +240,26 @@ void ublox_handle_packet(uBloxPacket *pkt) {
       currentGPSData.minutes = pkt->data.navpvt.min;
       currentGPSData.seconds = pkt->data.navpvt.sec;
       currentGPSData.sats_raw = pkt->data.navpvt.numSV;
-      currentGPSData.speed_raw = pkt->data.navpvt.gSpeed;
+      // currentGPSData.speed_raw = pkt->data.navpvt.gSpeed; // Don't try and take gSpeed from NAV-PVT (if it is even sent)
 
     } else if (pkt->header.messageClass == 0x01 && pkt->header.messageId == 0x02){
+      // NAV-POSLLH
       currentGPSData.ok_packets += 1;
       currentGPSData.lat_raw = pkt->data.navposllh.lat;
       currentGPSData.lon_raw = pkt->data.navposllh.lon;
       currentGPSData.alt_raw = pkt->data.navposllh.hMSL;
     } else if (pkt->header.messageClass == 0x01 && pkt->header.messageId == 0x06){
+      // NAV-SOL
       currentGPSData.fix = pkt->data.navsol.gpsFix;
       currentGPSData.sats_raw = pkt->data.navsol.numSV;
     } else if (pkt->header.messageClass == 0x01 && pkt->header.messageId == 0x21){
+      // NAV-TIMEUTC
       currentGPSData.hours = pkt->data.navtimeutc.hour;
       currentGPSData.minutes = pkt->data.navtimeutc.min;
       currentGPSData.seconds = pkt->data.navtimeutc.sec;
+    } else if (pkt->header.messageClass == 0x01 && pkt->header.messageId == 0x12){
+      // NAV-VELNED
+      currentGPSData.speed_raw = pkt->data.navvelned.gSpeed;
     } else if (pkt->header.messageClass == 0x05 && pkt->header.messageId == 0x01){
       ack_received = 1;
     } else if (pkt->header.messageClass == 0x05 && pkt->header.messageId == 0x00){

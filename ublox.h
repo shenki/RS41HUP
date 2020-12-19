@@ -100,6 +100,18 @@ typedef struct {
 
 typedef struct {
   uint32_t iTOW;		//GPS Millisecond Time of Week [- ms]
+  int32_t velN;		// NED north velocity (cm/s)
+  int32_t velE;		// NED east velocity (cm/s)
+  int32_t velD;		// NED down velocity (cm/s)
+  uint32_t speed; // Speed (3-D) (cm/s)
+  uint32_t gSpeed; // Ground Speed (3-D) (cm/s)
+  int32_t heading; // Heading of motion 2-D
+  uint32_t sAcc; // Speed Accuracy Estimate (cm/s)
+  uint32_t cAcc; // Course Accuracy Estimate (degrees)
+} uBloxNAVVELNEDPayload;
+
+typedef struct {
+  uint32_t iTOW;		//GPS Millisecond Time of Week [- ms]
   uint32_t tAcc;		//Time Accuracy Estimate [- ns]
   int32_t nano;		//Nanoseconds of second, range -1e9 .. 1e9 (UTC) [- ns]
   uint16_t year;		//Year, range 1999..2099 (UTC) [- y]
@@ -188,6 +200,7 @@ typedef union {
   uBloxNAVPOSLLHPayload navposllh;
   uBloxNAVSOLPayload navsol;
   uBloxNAVTIMEUTCPayload navtimeutc;
+  uBloxNAVVELNEDPayload navvelned;
   uBloxACKACKayload ackack;
   uBloxCFGRSTPayload cfgrst;
   uBloxCFGRXMPayload cfgrxm;
@@ -207,5 +220,7 @@ void ublox_handle_incoming_byte(uint8_t data);
 void ublox_handle_packet(uBloxPacket *pkt);
 uint8_t ublox_wait_for_ack();
 void ubx_powersave();
+void ublox_gps_stop();
+void ublox_gps_start();
 
 #endif //RS41HUP_UBLOX_H

@@ -19,7 +19,7 @@
 #include "radio.h"
 #include "ublox.h"
 #include "delay.h"
-#include "aprs.h"
+//#include "aprs.h"
 #include "util.h"
 #include "mfsk.h"
 #include "horus_l2.h"
@@ -37,6 +37,7 @@
 #define RTTY 1
 #define MFSK 2
 #define FSK_2 3
+
 volatile int current_mode = STARTUP;
 
 // Telemetry Data to Transmit - used in RTTY & MFSK packet generation functions.
@@ -68,6 +69,11 @@ volatile uint16_t packet_length = 0;
 volatile uint16_t button_pressed = 0;
 volatile uint8_t disable_armed = 0;
 
+volatile uint32_t deep_sleep_timer = 0;
+
+#ifdef TX_PIP
+volatile unsigned int tx_pip = TX_PIP / (1000/BAUD_RATE);
+#endif
 
 // Binary Packet Format
 // Note that we need to pack this to 1-byte alignment, hence the #pragma flags below
@@ -263,6 +269,19 @@ void TIM2_IRQHandler(void) {
       tx_on_delay--;
     }
 
+    // Pip transmission logic.
+    // Only enabled if Continuous mode is disabled!
+    #ifdef TX_PIP
+    #ifndef CONTINUOUS_MODE
+      if ((tx_enable == 0) && (tx_on_delay%tx_pip)==TX_PIP_SYMBOLS){
+        radio_rw_register(0x73, 0x00, 1);
+        radio_enable_tx();
+      } else if ((tx_enable == 0) && (tx_on_delay%tx_pip)==0){
+        radio_disable_tx();
+      }
+    #endif
+    #endif
+
     // Green LED Blinking Logic
     if (--cun == 0) {
       if (pun) {
@@ -363,6 +382,63 @@ int main(void) {
           // We've finished the 4FSK transmission, grab new data.
           current_mode = STARTUP;
           radio_disable_tx();
+
+          #ifdef DEEP_SLEEP
+          // Deep Sleep mode!
+
+          // Only enter deep sleep mode if we have a valid GPS lock and position.
+          if ((gpsData.fix == 3) && (gpsData.lat_raw != 0.0) && (gpsData.lon_raw != 0.0)){
+            // Pause the GPS
+            ublox_gps_stop();
+
+            gpsData.lat_raw = 0;
+            gpsData.lon_raw = 0;
+            gpsData.fix = 0;
+
+            deep_sleep_timer = DEEP_SLEEP*60*1000;
+            while(deep_sleep_timer > 0){
+              // Turn off LED
+              led_enabled = 0;
+              // User lowest tone for each pip.
+              radio_rw_register(0x73, 0x00, 1);
+              // Send a pip
+              if( (deep_sleep_timer % DEEP_SLEEP_PIPS) == 0){
+                radio_enable_tx();
+                _delay_ms(50);
+                radio_disable_tx();
+              }
+
+              // Sleep
+              // TODO: How do we make this a non-busy-wait sleep?
+              _delay_ms(1000);
+              deep_sleep_timer = deep_sleep_timer - 1000;
+            }
+            // Restart the GPS
+            ublox_gps_start();
+            _delay_ms(1000);
+
+            // Wait for GPS lock
+            while(1){
+              ublox_get_last_data(&gpsData);
+              if(gpsData.fix == 3 && gpsData.lat_raw != 0 && gpsData.lon_raw != 0){
+                radio_enable_tx();
+                _delay_ms(2000);
+                break;
+              }
+              // Double pip to indicate we are awaiting GPS lock.
+              radio_enable_tx();
+              _delay_ms(20);
+              radio_disable_tx();
+              _delay_ms(50);
+              radio_enable_tx();
+              _delay_ms(20);
+              radio_disable_tx();
+              _delay_ms(2000);
+            }
+          }
+
+          #endif
+
         }
     } else {
       NVIC_SystemLPConfig(NVIC_LP_SEVONPEND, DISABLE);
@@ -379,7 +455,12 @@ void collect_telemetry_data() {
   voltage = ADCVal[0] * 600 / 4096;
   ublox_get_last_data(&gpsData);
 
-  if (gpsData.fix >= 3) {
+  if (gpsData.fix == 3) {
+      #ifdef UBLOX_POWERSAVE
+        if(send_count%100 == 0){
+          ubx_powersave();
+        }
+      #endif
       flaga |= 0x80;
       // Disable LEDs if altitude is > 1000m. (Power saving? Maybe?)
       if ((gpsData.alt_raw / 1000) > 1000){
@@ -463,7 +544,7 @@ void send_mfsk_packet(){
   BinaryPacket.Latitude = float_lat;
   BinaryPacket.Longitude = float_lon;
   BinaryPacket.Altitude = (uint16_t)(gpsData.alt_raw/1000);
-  BinaryPacket.Speed = (uint8_t)((float)gpsData.speed_raw*0.0036);
+  BinaryPacket.Speed = (uint8_t)((float)gpsData.speed_raw*0.036); // Using NAV-VELNED gSpeed, which is in cm/s. Convert to kph.
   BinaryPacket.BattVoltage = volts_scaled;
   BinaryPacket.Sats = gpsData.sats_raw;
   BinaryPacket.Temp = si4032_temperature;
