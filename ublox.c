@@ -71,6 +71,8 @@ void ublox_get_last_data(GPSEntry * gpsEntry){
 }
 
 void ubx_powersave(){
+  // Enter uBlox Power Save mode.
+  // The default power-save settings should be OK (1 second cyclic)
   uBloxPacket msgcfgrxm = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x11, .payloadSize=sizeof(uBloxCFGRXMPayload)},
       .data.cfgrxm = {.reserved1=8, .lpMode=1}};
 

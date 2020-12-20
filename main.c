@@ -70,6 +70,7 @@ volatile uint16_t button_pressed = 0;
 volatile uint8_t disable_armed = 0;
 
 volatile uint32_t deep_sleep_timer = 0;
+volatile uint8_t entered_psm = 0;
 
 #ifdef TX_PIP
 volatile unsigned int tx_pip = TX_PIP / (1000/BAUD_RATE);
@@ -456,6 +457,13 @@ void collect_telemetry_data() {
   ublox_get_last_data(&gpsData);
 
   if (gpsData.gpsFixOK == 1) {
+      // If we have a good fix, we can enter power-saving mode
+      #ifdef UBLOX_POWERSAVE
+        if ((gpsData.sats_raw > 5) && (entered_psm == 0)){
+          ubx_powersave();
+          entered_psm = 1;
+        }
+      #endif
       flaga |= 0x80;
       // Disable LEDs if altitude is > 1000m. (Power saving? Maybe?)
       if ((gpsData.alt_raw / 1000) > 1000){
