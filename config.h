@@ -77,6 +77,11 @@
 // At 100 baud, each symbol is 10ms
 #define TX_PIP_SYMBOLS  5
 
+// Enable uBlox Eco Mode
+// Note: This is known buggy! Fixes are not updated correctly. 
+// Not flight-tested yet!
+//#define UBLOX_ECO_MODE 1
+
 // Enable uBlox PowerSave Mode
 // Note: This is known buggy! Fixes are not updated correctly. 
 // Not flight-tested yet!

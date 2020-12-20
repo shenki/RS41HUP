@@ -16,6 +16,8 @@ typedef struct {
   uint8_t minutes;
   uint8_t hours;
   uint8_t fix;
+  uint8_t gpsFixOK;
+  uint8_t psmState;
   uint16_t ok_packets;
   uint16_t bad_packets;
 } GPSEntry;
@@ -125,6 +127,16 @@ typedef struct {
 } uBloxNAVTIMEUTCPayload;
 
 typedef struct {
+  uint32_t iTOW;		//GPS Millisecond Time of Week [- ms]
+  uint8_t gpsFix;		//GPS Fix State
+  uint8_t flags;  // LSB = gpsFixOK - the only valid way of determining if a fix is actually OK.
+  uint8_t fixStat;
+  uint8_t flags2; // Power Save Mode State
+  uint32_t ttff;
+  uint32_t msss;
+} uBloxNAVSTATUSPayload;
+
+typedef struct {
   uint8_t portID;		//Port Identifier Number (see Serial [- -]
   uint8_t reserved1;		//Reserved [- -]
   uint16_t txReady;		//TX ready PIN configuration [- -]
@@ -201,6 +213,7 @@ typedef union {
   uBloxNAVSOLPayload navsol;
   uBloxNAVTIMEUTCPayload navtimeutc;
   uBloxNAVVELNEDPayload navvelned;
+  uBloxNAVSTATUSPayload navstatus;
   uBloxACKACKayload ackack;
   uBloxCFGRSTPayload cfgrst;
   uBloxCFGRXMPayload cfgrxm;
@@ -219,7 +232,9 @@ uBloxChecksum ublox_calc_checksum(const uint8_t msgClass, const uint8_t msgId, c
 void ublox_handle_incoming_byte(uint8_t data);
 void ublox_handle_packet(uBloxPacket *pkt);
 uint8_t ublox_wait_for_ack();
+void ubx_config_gps();
 void ubx_powersave();
+void ubx_eco_mode();
 void ublox_gps_stop();
 void ublox_gps_start();
 

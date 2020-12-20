@@ -78,10 +78,18 @@ void ubx_powersave(){
   ublox_wait_for_ack(); // ok to fail
 }
 
+void ubx_eco_mode(){
+  uBloxPacket msgcfgrxm = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x11, .payloadSize=sizeof(uBloxCFGRXMPayload)},
+      .data.cfgrxm = {.reserved1=8, .lpMode=4}};
+
+  send_ublox_packet(&msgcfgrxm);
+  ublox_wait_for_ack(); // ok to fail
+}
+
 void ublox_init(){
   /* Hardware reset ublox to 9600 baud */
   init_usart_gps(9600, 1);
-  reset_gps();
+  reset_gps(); // MJ: Not sure this is working! It doesn't seem to set the IO line...
   _delay_ms(800);
 
   /* CFG_PRT: turn off all GPS NMEA strings on the uart, switch to 38400 baud rate */
@@ -95,43 +103,7 @@ void ublox_init(){
   init_usart_gps(38400, 1);
   _delay_ms(10);
 
-  uBloxPacket msgcfgmsg = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x01, .payloadSize=sizeof(uBloxCFGMSGPayload)},
-    .data.cfgmsg = {.msgClass=0x01, .msgID=0x02, .rate=1}};
-
-  // Configure to send NAV-POSLLH Messages at 1Hz
-  do {
-    send_ublox_packet(&msgcfgmsg);
-  } while (!ublox_wait_for_ack());
-
-  // Configure to send NAV-SOL Messages at 1Hz
-  msgcfgmsg.data.cfgmsg.msgID = 0x6;
-  do {
-    send_ublox_packet(&msgcfgmsg);
-  } while (!ublox_wait_for_ack());
-
-  // Configure to send NAV-TIMEUTC Messages at 1Hz
-  msgcfgmsg.data.cfgmsg.msgID = 0x21;
-  do {
-    send_ublox_packet(&msgcfgmsg);
-  } while (!ublox_wait_for_ack());
-
-  // Configure to send NAV-VELNED Messages at 1Hz
-  msgcfgmsg.data.cfgmsg.msgID = 0x12;
-  do {
-    send_ublox_packet(&msgcfgmsg);
-  } while (!ublox_wait_for_ack());
-
-  // Configure flight mode - needed above 18km altitude
-  uBloxPacket msgcfgnav5 = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x24, .payloadSize=sizeof(uBloxCFGNAV5Payload)},
-    .data.cfgnav5={.mask=0b00000001111111111, .dynModel=7, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=25, .tDop=25,
-                   .pAcc=100, .tAcc=300, .staticHoldThresh=0, .dgpsTimeOut=2, .reserved2=0, .reserved3=0, .reserved4=0}};
-  do {
-    send_ublox_packet(&msgcfgnav5);
-  } while (!ublox_wait_for_ack());
-
-  #ifdef UBLOX_POWERSAVE
-    ubx_powersave();
-  #endif
+  ubx_config_gps();
 
 }
 
@@ -154,6 +126,10 @@ void ublox_gps_start(){
     send_ublox_packet(&msgcfgrst);
   } while (!ublox_wait_for_ack());
 
+  ubx_config_gps();
+}
+
+void ubx_config_gps(){
   uBloxPacket msgcfgmsg = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x01, .payloadSize=sizeof(uBloxCFGMSGPayload)},
     .data.cfgmsg = {.msgClass=0x01, .msgID=0x02, .rate=1}};
 
@@ -180,13 +156,24 @@ void ublox_gps_start(){
     send_ublox_packet(&msgcfgmsg);
   } while (!ublox_wait_for_ack());
 
+  // Configure to send NAV-STATUS Messages at 1Hz
+  msgcfgmsg.data.cfgmsg.msgID = 0x03;
+  do {
+    send_ublox_packet(&msgcfgmsg);
+  } while (!ublox_wait_for_ack());
+
   // Configure flight mode - needed above 18km altitude
+  // Notes: Tweaked the 
   uBloxPacket msgcfgnav5 = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x24, .payloadSize=sizeof(uBloxCFGNAV5Payload)},
-    .data.cfgnav5={.mask=0b00000001111111111, .dynModel=7, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=25, .tDop=25,
+    .data.cfgnav5={.mask=0b00000001111111111, .dynModel=6, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=30, .tDop=30,
                    .pAcc=100, .tAcc=300, .staticHoldThresh=0, .dgpsTimeOut=2, .reserved2=0, .reserved3=0, .reserved4=0}};
   do {
     send_ublox_packet(&msgcfgnav5);
   } while (!ublox_wait_for_ack());
+
+  #ifdef UBLOX_ECO_MODE
+    ubx_eco_mode();
+  #endif
 
 }
 
@@ -248,6 +235,11 @@ void ublox_handle_packet(uBloxPacket *pkt) {
       currentGPSData.lat_raw = pkt->data.navposllh.lat;
       currentGPSData.lon_raw = pkt->data.navposllh.lon;
       currentGPSData.alt_raw = pkt->data.navposllh.hMSL;
+    } else if (pkt->header.messageClass == 0x01 && pkt->header.messageId == 0x03){
+      // NAV-STATUS
+      currentGPSData.ok_packets += 1;
+      currentGPSData.gpsFixOK = pkt->data.navstatus.flags & 0x01;
+      currentGPSData.psmState = pkt->data.navstatus.flags2 & 0x03;
     } else if (pkt->header.messageClass == 0x01 && pkt->header.messageId == 0x06){
       // NAV-SOL
       currentGPSData.fix = pkt->data.navsol.gpsFix;

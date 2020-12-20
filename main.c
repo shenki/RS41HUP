@@ -387,7 +387,7 @@ int main(void) {
           // Deep Sleep mode!
 
           // Only enter deep sleep mode if we have a valid GPS lock and position.
-          if ((gpsData.fix == 3) && (gpsData.lat_raw != 0.0) && (gpsData.lon_raw != 0.0)){
+          if (gpsData.gpsFixOK == 1){
             // Pause the GPS
             ublox_gps_stop();
 
@@ -420,7 +420,7 @@ int main(void) {
             // Wait for GPS lock
             while(1){
               ublox_get_last_data(&gpsData);
-              if(gpsData.fix == 3 && gpsData.lat_raw != 0 && gpsData.lon_raw != 0){
+              if(gpsData.gpsFixOK == 1){
                 radio_enable_tx();
                 _delay_ms(2000);
                 break;
@@ -455,12 +455,7 @@ void collect_telemetry_data() {
   voltage = ADCVal[0] * 600 / 4096;
   ublox_get_last_data(&gpsData);
 
-  if (gpsData.fix == 3) {
-      #ifdef UBLOX_POWERSAVE
-        if(send_count%100 == 0){
-          ubx_powersave();
-        }
-      #endif
+  if (gpsData.gpsFixOK == 1) {
       flaga |= 0x80;
       // Disable LEDs if altitude is > 1000m. (Power saving? Maybe?)
       if ((gpsData.alt_raw / 1000) > 1000){

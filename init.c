@@ -106,7 +106,7 @@ void reset_gps()
 	GPIO_ResetBits(GPIOA, 15);
 
 	// Brief delay
-	 _delay_ms(1);
+	_delay_ms(10);
 
 	// Pull-up Reset pin
 	GPIO_Conf.GPIO_Mode = GPIO_Mode_IPU;
