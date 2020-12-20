@@ -493,6 +493,15 @@ void send_rtty_packet() {
   uint32_t lon_fl = (uint32_t) abs(abs(gpsData.lon_raw) - lon_d * 10000000) / 1000;
 
   uint8_t speed_kph = (uint8_t)((float)gpsData.speed_raw*0.0036);
+
+  // Add onto the sats_raw value to indicate if the GPS is in regular tracking (+100)
+  // or power optimized tracker (+200) modes.
+  uint8_t sats_state = gpsData.sats_raw;
+  if(gpsData.psmState == 1){
+    sats_state += 100;
+  } else if(gpsData.psmState == 2){
+    sats_state += 200;
+  }
  
   // Produce a RTTY Sentence (Compatible with the existing HORUS RTTY payloads)
   
@@ -504,7 +513,7 @@ void send_rtty_packet() {
         gpsData.lon_raw < 0 ? "-" : "", lon_d, lon_fl,
         (gpsData.alt_raw / 1000),
         speed_kph,
-        gpsData.sats_raw,
+        sats_state,
         voltage*10,
         si4032_temperature
         );
@@ -548,6 +557,13 @@ void send_mfsk_packet(){
   BinaryPacket.Longitude = float_lon;
   BinaryPacket.Altitude = (uint16_t)(gpsData.alt_raw/1000);
   BinaryPacket.Speed = (uint8_t)((float)gpsData.speed_raw*0.036); // Using NAV-VELNED gSpeed, which is in cm/s. Convert to kph.
+
+  // Temporary pDOP info, to determine suitable pDOP limits.
+  //float pDop = (float)gpsData.pDOP/10.0;
+  //if (pDop>255.0){
+  //  pDop = 255.0;
+  //}
+  //BinaryPacket.Speed = (uint8_t)pDop;
   BinaryPacket.BattVoltage = volts_scaled;
   BinaryPacket.Sats = gpsData.sats_raw;
   BinaryPacket.Temp = si4032_temperature;

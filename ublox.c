@@ -167,8 +167,8 @@ void ubx_config_gps(){
   // Configure flight mode - needed above 18km altitude
   // Notes: Tweaked the PDOP limits a bit, to make it a bit more likely to report a position.
   uBloxPacket msgcfgnav5 = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x24, .payloadSize=sizeof(uBloxCFGNAV5Payload)},
-    .data.cfgnav5={.mask=0b00000001111111111, .dynModel=6, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=50, .tDop=50,
-                   .pAcc=100, .tAcc=300, .staticHoldThresh=0, .dgpsTimeOut=2, .reserved2=0, .reserved3=0, .reserved4=0}};
+    .data.cfgnav5={.mask=0b00000001111111111, .dynModel=6, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=200, .tDop=200,
+                   .pAcc=200, .tAcc=300, .staticHoldThresh=0, .dgpsTimeOut=2, .reserved2=0, .reserved3=0, .reserved4=0}};
   do {
     send_ublox_packet(&msgcfgnav5);
   } while (!ublox_wait_for_ack());
@@ -246,6 +246,7 @@ void ublox_handle_packet(uBloxPacket *pkt) {
       // NAV-SOL
       currentGPSData.fix = pkt->data.navsol.gpsFix;
       currentGPSData.sats_raw = pkt->data.navsol.numSV;
+      currentGPSData.pDOP = pkt->data.navsol.pDOP;
     } else if (pkt->header.messageClass == 0x01 && pkt->header.messageId == 0x21){
       // NAV-TIMEUTC
       currentGPSData.hours = pkt->data.navtimeutc.hour;

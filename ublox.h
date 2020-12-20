@@ -18,6 +18,7 @@ typedef struct {
   uint8_t fix;
   uint8_t gpsFixOK;
   uint8_t psmState;
+  uint16_t pDOP;
   uint16_t ok_packets;
   uint16_t bad_packets;
 } GPSEntry;
