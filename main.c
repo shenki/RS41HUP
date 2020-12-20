@@ -459,7 +459,7 @@ void collect_telemetry_data() {
   if (gpsData.gpsFixOK == 1) {
       // If we have a good fix, we can enter power-saving mode
       #ifdef UBLOX_POWERSAVE
-        if ((gpsData.sats_raw > 5) && (entered_psm == 0)){
+        if ((gpsData.sats_raw >= 6) && (entered_psm == 0)){
           ubx_powersave();
           entered_psm = 1;
         }
@@ -551,6 +551,14 @@ void send_mfsk_packet(){
   BinaryPacket.BattVoltage = volts_scaled;
   BinaryPacket.Sats = gpsData.sats_raw;
   BinaryPacket.Temp = si4032_temperature;
+
+  // Add onto the sats_raw value to indicate if the GPS is in regular tracking (+100)
+  // or power optimized tracker (+200) modes.
+  if(gpsData.psmState == 1){
+    BinaryPacket.Sats += 100;
+  } else if(gpsData.psmState == 2){
+    BinaryPacket.Sats += 200;
+  }
 
   BinaryPacket.Checksum = (uint16_t)array_CRC16_checksum((char*)&BinaryPacket,sizeof(BinaryPacket)-2);
 

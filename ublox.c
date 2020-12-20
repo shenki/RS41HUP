@@ -165,9 +165,9 @@ void ubx_config_gps(){
   } while (!ublox_wait_for_ack());
 
   // Configure flight mode - needed above 18km altitude
-  // Notes: Tweaked the 
+  // Notes: Tweaked the PDOP limits a bit, to make it a bit more likely to report a position.
   uBloxPacket msgcfgnav5 = {.header = {0xb5, 0x62, .messageClass=0x06, .messageId=0x24, .payloadSize=sizeof(uBloxCFGNAV5Payload)},
-    .data.cfgnav5={.mask=0b00000001111111111, .dynModel=6, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=30, .tDop=30,
+    .data.cfgnav5={.mask=0b00000001111111111, .dynModel=6, .fixMode=2, .fixedAlt=0, .fixedAltVar=10000, .minElev=5, .drLimit=0, .pDop=50, .tDop=50,
                    .pAcc=100, .tAcc=300, .staticHoldThresh=0, .dgpsTimeOut=2, .reserved2=0, .reserved3=0, .reserved4=0}};
   do {
     send_ublox_packet(&msgcfgnav5);
