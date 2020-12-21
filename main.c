@@ -387,8 +387,13 @@ int main(void) {
           #ifdef DEEP_SLEEP
           // Deep Sleep mode!
 
-          // Only enter deep sleep mode if we have a valid GPS lock and position.
-          if (gpsData.gpsFixOK == 1){
+          // Only enter deep sleep mode if we have a valid GPS lock and position, and we are
+          // tracking a decent amount of sats.
+          if (gpsData.gpsFixOK == 1 && gpsData.sats_raw >=6){
+            // Turn off Green LED
+            GPIO_SetBits(GPIOB, GREEN);
+            led_enabled = 0;
+
             // Pause the GPS
             ublox_gps_stop();
 
