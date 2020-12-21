@@ -56,7 +56,7 @@
 // - GPS Max Performance, Transmitting @ 13 dBm = ~150 mA
 // - GPS Max Performance, Not Transmitting = 70-90mA
 // - GPS in PowerSave Mode, Transmitting @ 13 dBm = ~120 mA
-// - GPS in PowerSave Mode, not Transmitting = 30-50mA
+// - GPS in PowerSave Mode, not Transmitting = 30-50mA, depending on GPS state.
 // If enabled, transmit incrementing tones in the 'idle' period between packets.
 // This will only function if ONLY MFSK is enabled.
 // Note, you need to COMMENT this line out to disable this, not just set it to 0
@@ -77,24 +77,20 @@
 // At 100 baud, each symbol is 10ms
 #define TX_PIP_SYMBOLS  5
 
-// Enable uBlox Eco Mode
-// Note: This is known buggy! Fixes are not updated correctly. 
-// Not flight-tested yet!
-//#define UBLOX_ECO_MODE 1
 
 // Enable uBlox PowerSave Mode
-// Note: This is known buggy! Fixes are not updated correctly. 
-// Not flight-tested yet!
+// Drops current consummption from the GPS somewhat.
+// Positional accuracy may be slightly impacted. Suggest not using this for short flights.
+// Flight-tested on 2020-12.
 //#define UBLOX_POWERSAVE 1
 
 // *********** Deep Sleep Mode ******************
-// Deep Sleep Modes intended for long duration flights only!
-// NOTE: This mode is a bit buggy, still some work to do.
-// Current issues:
-// When coming back out of sleep mode, the time isn't correct.
-// Position *might* be OK, but i'm not sure yet.
+// Deep Sleep Mode intended for long duration flights only!
 //
-// Only use this mode with MFSK transmissions.
+// Notes:
+// - Only have MFSK transmissions enabled.
+// - Disable continuous mode.
+// - Disable GPS powersave mode. 
 //
 // Power consumption in sleep mode = 32mA @ 3V
 //
