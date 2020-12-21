@@ -428,7 +428,7 @@ int main(void) {
               ublox_get_last_data(&gpsData);
               if(gpsData.gpsFixOK == 1){
                 radio_enable_tx();
-                _delay_ms(2000);
+                _delay_ms(1000);
                 break;
               }
               // Double pip to indicate we are awaiting GPS lock.
@@ -564,11 +564,11 @@ void send_mfsk_packet(){
   BinaryPacket.Speed = (uint8_t)((float)gpsData.speed_raw*0.036); // Using NAV-VELNED gSpeed, which is in cm/s. Convert to kph.
 
   // Temporary pDOP info, to determine suitable pDOP limits.
-  //float pDop = (float)gpsData.pDOP/10.0;
-  //if (pDop>255.0){
-  //  pDop = 255.0;
-  //}
-  //BinaryPacket.Speed = (uint8_t)pDop;
+  float pDop = (float)gpsData.pDOP/10.0;
+  if (pDop>255.0){
+   pDop = 255.0;
+  }
+  BinaryPacket.Speed = (uint8_t)pDop;
   BinaryPacket.BattVoltage = volts_scaled;
   BinaryPacket.Sats = gpsData.sats_raw;
   BinaryPacket.Temp = si4032_temperature;
