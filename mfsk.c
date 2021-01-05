@@ -1,4 +1,5 @@
 #include <stdio.h>
+#include <stdint.h>
 #include "mfsk.h"
 
 int send_16fsk(char current_char) {
