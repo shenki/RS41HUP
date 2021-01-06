@@ -53,6 +53,8 @@ uint16_t CRC_rtty = 0x12ab;  //checksum (dummy initial value)
 char buf_rtty[200];
 char buf_mfsk[200];
 
+__IO uint16_t ADCVal[2];
+
 // Volatile Variables, used within interrupts.
 volatile int adc_bottom = 2000;
 volatile char flaga = 0; // GPS Status Flags
