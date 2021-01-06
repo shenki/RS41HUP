@@ -9,13 +9,15 @@ set(CMAKE_SYSTEM_PROCESSOR arm)
 #
 
 if (UNIX)
-    set(tools "$ENV{HOME}/opt/gcc-arm-none-eabi/")
+    set(tools "$ENV{HOME}/opt/gcc-arm-none-eabi")
     set(CMAKE_C_COMPILER ${tools}/bin/arm-none-eabi-gcc)
     set(CMAKE_C_COMPILER ${tools}/bin/arm-none-eabi-g++)
+    set(CMAKE_SIZE_TOOL ${tools}/bin/arm-none-eabi-size)
 else ()
-    set(tools "D:/Programy/GNU Tools ARM Embedded/5.4 2016q3/")
+    set(tools "D:/Programy/GNU Tools ARM Embedded/5.4 2016q3")
     set(CMAKE_C_COMPILER ${tools}/bin/arm-none-eabi-gcc.exe)
     set(CMAKE_C_COMPILER ${tools}/bin/arm-none-eabi-g++.exe)
+    set(CMAKE_SIZE_TOOL ${tools}/bin/arm-none-eabi-size.exe)
 endif ()
 
 set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
@@ -55,7 +57,7 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
         COMMENT "Building ${HEX_FILE} \nBuilding ${BIN_FILE}"
-        COMMAND ${tools}/bin/arm-none-eabi-size ${PROJECT_NAME}.elf)
+	COMMAND ${CMAKE_SIZE_TOOL} ${PROJECT_NAME}.elf)
 
 set(CMAKE_CXX_STANDARD 11)
 
