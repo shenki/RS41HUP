@@ -490,6 +490,7 @@ void collect_telemetry_data() {
 
 
 void send_rtty_packet() {
+  int n;
   // Write a RTTY packet into the tx buffer, and start transmission.
 
   // Convert raw lat/lon values into degrees and decimal degree values.
@@ -511,7 +512,7 @@ void send_rtty_packet() {
  
   // Produce a RTTY Sentence (Compatible with the existing HORUS RTTY payloads)
   
-  sprintf(buf_rtty, "\n\n\n\n$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04"PRId32"d,%s%d.%04" PRId32 ",%"PRId32",%d,%d,%d,%d",
+  n = sprintf(buf_rtty, "\n\n\n\n$$$$$%s,%d,%02u:%02u:%02u,%s%d.%04"PRId32"d,%s%d.%04" PRId32 ",%"PRId32",%d,%d,%d,%d",
         callsign,
         send_count,
         gpsData.hours, gpsData.minutes, gpsData.seconds,
@@ -526,7 +527,7 @@ void send_rtty_packet() {
   
   // Calculate and append CRC16 checksum to end of sentence.
   CRC_rtty = string_CRC16_checksum(buf_rtty + 9);
-  sprintf(buf_rtty, "%s*%04X\n", buf_rtty, CRC_rtty & 0xffff);
+  sprintf(buf_rtty + n, "%04X\n", CRC_rtty & 0xffff);
 
   // Point the TX buffer at the temporary RTTY packet buffer.
   tx_buffer = buf_rtty;
