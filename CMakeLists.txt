@@ -2,21 +2,26 @@ cmake_minimum_required(VERSION 3.6)
 include(CMakeForceCompiler)
 SET(CMAKE_SYSTEM_NAME "Generic")
 SET(CMAKE_SYSTEM_VERSION 1)
-
+set(CMAKE_SYSTEM_PROCESSOR arm)
 
 #
 # Set Toolchain Path Below
 #
 
 if (UNIX)
-    set(TOOLCHAIN_DIR "$ENV{HOME}/opt/gcc-arm-none-eabi/bin")
-    CMAKE_FORCE_C_COMPILER(${TOOLCHAIN_DIR}/arm-none-eabi-gcc GNU)
-    CMAKE_FORCE_CXX_COMPILER(${TOOLCHAIN_DIR}/arm-none-eabi-g++ GNU)
+    set(tools "$ENV{HOME}/opt/gcc-arm-none-eabi/")
+    set(CMAKE_C_COMPILER ${tools}/bin/arm-none-eabi-gcc)
+    set(CMAKE_C_COMPILER ${tools}/bin/arm-none-eabi-g++)
 else ()
-    set(TOOLCHAIN_DIR "D:/Programy/GNU Tools ARM Embedded/5.4 2016q3/bin")
-    CMAKE_FORCE_C_COMPILER(${TOOLCHAIN_DIR}/arm-none-eabi-gcc.exe GNU)
-    CMAKE_FORCE_CXX_COMPILER(${TOOLCHAIN_DIR}/arm-none-eabi-g++.exe GNU)
+    set(tools "D:/Programy/GNU Tools ARM Embedded/5.4 2016q3/")
+    set(CMAKE_C_COMPILER ${tools}/bin/arm-none-eabi-gcc.exe)
+    set(CMAKE_C_COMPILER ${tools}/bin/arm-none-eabi-g++.exe)
 endif ()
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)
 
 project(RS41HUP C CXX)
 
@@ -27,7 +32,7 @@ add_definitions(-DSUPPORT_CPLUSPLUS)
 add_definitions(-D__ASSEMBLY__)
 
 SET(LINKER_SCRIPT ${PROJECT_SOURCE_DIR}/arm-gcc-link.ld)
-SET(COMMON_FLAGS " -mcpu=cortex-m3 -mthumb -Wall -ffunction-sections -g -O3 -g -nostartfiles ")
+SET(COMMON_FLAGS " -mcpu=cortex-m3 -Wall -ffunction-sections -O3 -g -nostartfiles ")
 SET(CMAKE_CXX_FLAGS "${COMMON_FLAGS} -std=c++11")
 SET(CMAKE_C_FLAGS "${COMMON_FLAGS} -std=gnu99")
 SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-Map=${CMAKE_BINARY_DIR}/${PROJECT_NAME}.map -lstdc++ -O3 -Wl,--gc-sections -T ${LINKER_SCRIPT}")
@@ -50,7 +55,7 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
         COMMENT "Building ${HEX_FILE} \nBuilding ${BIN_FILE}"
-        COMMAND ${TOOLCHAIN_DIR}/arm-none-eabi-size ${PROJECT_NAME}.elf)
+        COMMAND ${tools}/bin/arm-none-eabi-size ${PROJECT_NAME}.elf)
 
 set(CMAKE_CXX_STANDARD 11)
 
